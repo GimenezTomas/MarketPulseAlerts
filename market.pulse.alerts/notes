@@ -1,0 +1,3 @@
+THREADS:
+    Elegí usar esto para hacer las peticiones a los clientes externos en simultaneo ya que no he tenido mucho contacto con threads por lo que me parecia una buena oportunidad para aplicarlos. De todas maneras, creo que es una oportunidad de mejora reemplzarlo a futuro por programacion reactiva o algo similar.
+    Aplique el patron Active Object Pattern

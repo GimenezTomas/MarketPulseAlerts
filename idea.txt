@@ -1,0 +1,228 @@
+La aplicación será una api de notificaciones financieras. La idea principal es la posibilidad de suscribirse a determinados bonos, acciones, etc. La aplicación periodicamente mirará todos los elementos que deba y luego chequeará el precio de referencia guardado con cada suscriptor, si este supera el porcentaje establecido por el mismo, será notificado. También deberá permitir desuscribirse. 
+ENDPOINTS:
+	1)Listar elementos a suscribirse:
+		TIPO: GET
+		PARAMS: Pais ( opcional )
+	 	RESPONSE: Lista con los elementos y la información que haya al respecto (codigo si o si).
+	2)Listar elementos suscriptos:
+		TIPO: GET
+		PARAMS: {
+			email: String
+		}
+		RESPONSE: Una lista con los elementos y la informacion que haya al respecto
+	3)Suscribir elemento: Se le envia el codigo del elemento, mail, porcentaje de subida y bajada en el que quiera ser notificado
+		TIPO: POST
+		PARAMS: {
+			cod: String,
+			email: String,
+			upperThreshold: Integer,
+			lowerThreshold: Integer
+		}
+		RESPONSE: OK
+	4)Desuscribir elemento: 
+		TIPO: UPDATE/DELETE
+		PARAMS: {
+			cod: String,
+			email: String
+		}
+		RESPONSE: OK 
+	5)Notificar Manual
+
+JOBS:
+	Notificador: Un job que debe correr periodicamente y hacer el trabajo de chequear los datos y notificar.
+		
+APIS EXTERNAS:
+	CRIPTO: 
+		URL: https://www.coingecko.com/
+		CUENTA: togimenez@fi.uba.ar
+		PLAN: gratis (30 llamadas x minuto, 10.000 al mes)
+		API-KEY: CG-xVdJVdnxJL7aCjBpffpiS14a
+		EJEMPLO:
+			CODIGO: 
+				OkHttpClient client = new OkHttpClient();
+
+Request request = new Request.Builder()
+  .url("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin%2Cethereum")
+  .get()
+  .addHeader("accept", "application/json")
+  .addHeader("x-cg-demo-api-key", "CG-xVdJVdnxJL7aCjBpffpiS14a")
+  .build();
+
+Response response = client.newCall(request).execute();
+
+	RESPONSE:
+		[
+  {
+    "id": "bitcoin",
+    "symbol": "btc",
+    "name": "Bitcoin",
+    "image": "https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png?1696501400",
+    "current_price": 92611,
+    "market_cap": 1833435014671,
+    "market_cap_rank": 1,
+    "fully_diluted_valuation": 1943770656875,
+    "total_volume": 65571789735,
+    "high_24h": 95344,
+    "low_24h": 91251,
+    "price_change_24h": -2410.7575867847627,
+    "price_change_percentage_24h": -2.53705,
+    "market_cap_change_24h": -48773449319.56714,
+    "market_cap_change_percentage_24h": -2.59129,
+    "circulating_supply": 19807962,
+    "total_supply": 21000000,
+    "max_supply": 21000000,
+    "ath": 108135,
+    "ath_change_percentage": -14.27647,
+    "ath_date": "2024-12-17T15:02:41.429Z",
+    "atl": 67.81,
+    "atl_change_percentage": 136602.91855,
+    "atl_date": "2013-07-06T00:00:00.000Z",
+    "roi": null,
+    "last_updated": "2025-01-10T00:51:29.744Z"
+  },
+  {
+    "id": "ethereum",
+    "symbol": "eth",
+    "name": "Ethereum",
+    "image": "https://coin-images.coingecko.com/coins/images/279/large/ethereum.png?1696501628",
+    "current_price": 3220.68,
+    "market_cap": 387945875014,
+    "market_cap_rank": 2,
+    "fully_diluted_valuation": 387945875014,
+    "total_volume": 30107598550,
+    "high_24h": 3352.88,
+    "low_24h": 3160.58,
+    "price_change_24h": -112.7553956566303,
+    "price_change_percentage_24h": -3.38256,
+    "market_cap_change_24h": -13092288764.44983,
+    "market_cap_change_percentage_24h": -3.2646,
+    "circulating_supply": 120479619.4169329,
+    "total_supply": 120479619.4169329,
+    "max_supply": null,
+    "ath": 4878.26,
+    "ath_change_percentage": -33.85025,
+    "ath_date": "2021-11-10T14:24:19.604Z",
+    "atl": 0.432979,
+    "atl_change_percentage": 745192.06739,
+    "atl_date": "2015-10-20T00:00:00.000Z",
+    "roi": {
+      "times": 45.49916721397397,
+      "currency": "btc",
+      "percentage": 4549.916721397397
+    },
+    "last_updated": "2025-01-10T00:51:20.583Z"
+  }
+]
+
+
+MERCADO:
+	URL: https://api.profit.com/#tag/Websockets
+	CUENTA: togimenez@fi.uba.ar
+	PLAN: gratis (100 llamadas por día)
+	API-KEY: ac4a0981eebf4723ad5e98c969519675
+	CONSOLE: https://profit.com/es/settings/data-api
+	EJEMPLO: 
+		CODIGO: 
+url: https://api.profit.com/data-api/reference/stocks?token=ac4a0981eebf4723ad5e98c969519675&skip=0&limit=10&country=United%20States&currency=USD&available_data=fundamental&type=Common%20Stock
+		RESPONSE:
+			{
+  "data": [
+    {
+      "ticker": "AAPL.US",
+      "symbol": "AAPL",
+      "name": "Apple Inc",
+      "type": "Common Stock",
+      "currency": "USD",
+      "country": "United States",
+      "exchange": "NASDAQ"
+    },
+    {
+      "ticker": "AMZN.US",
+      "symbol": "AMZN",
+      "name": "Amazon.com Inc",
+      "type": "Common Stock",
+      "currency": "USD",
+      "country": "United States",
+      "exchange": "NASDAQ"
+    },
+    {
+      "ticker": "TSLA.US",
+      "symbol": "TSLA",
+      "name": "Tesla Inc",
+      "type": "Common Stock",
+      "currency": "USD",
+      "country": "United States",
+      "exchange": "NASDAQ"
+    },
+    {
+      "ticker": "NVDA.US",
+      "symbol": "NVDA",
+      "name": "NVIDIA Corporation",
+      "type": "Common Stock",
+      "currency": "USD",
+      "country": "United States",
+      "exchange": "NASDAQ"
+    },
+    {
+      "ticker": "MSFT.US",
+      "symbol": "MSFT",
+      "name": "Microsoft Corporation",
+      "type": "Common Stock",
+      "currency": "USD",
+      "country": "United States",
+      "exchange": "NASDAQ"
+    },
+    {
+      "ticker": "GOOGL.US",
+      "symbol": "GOOGL",
+      "name": "Alphabet Inc Class A",
+      "type": "Common Stock",
+      "currency": "USD",
+      "country": "United States",
+      "exchange": "NASDAQ"
+    },
+    {
+      "ticker": "GOOG.US",
+      "symbol": "GOOG",
+      "name": "Alphabet Inc Class C",
+      "type": "Common Stock",
+      "currency": "USD",
+      "country": "United States",
+      "exchange": "NASDAQ"
+    },
+    {
+      "ticker": "META.US",
+      "symbol": "META",
+      "name": "Meta Platforms Inc.",
+      "type": "Common Stock",
+      "currency": "USD",
+      "country": "United States",
+      "exchange": "NASDAQ"
+    },
+    {
+      "ticker": "TSM.US",
+      "symbol": "TSM",
+      "name": "Taiwan Semiconductor Manufacturing",
+      "type": "Common Stock",
+      "currency": "USD",
+      "country": "United States",
+      "exchange": "NYSE"
+    },
+    {
+      "ticker": "AVGO.US",
+      "symbol": "AVGO",
+      "name": "Broadcom Inc",
+      "type": "Common Stock",
+      "currency": "USD",
+      "country": "United States",
+      "exchange": "NASDAQ"
+    }
+  ],
+  "total": 47016
+}
+
+Por ahora es la única manera que encontre de traer precio, solo uno x uno
+https://api.profit.com/data-api/market-data/quote/TSLA?token=ac4a0981eebf4723ad5e98c969519675
+
+RESPONSE:
+	{"ticker":"TSLA.US","name":"Tesla Inc","symbol":"TSLA","price":392.93,"previous_close":394.6,"daily_price_change":-1.670000000000016,"daily_percentage_change":-0.423213,"timestamp":1736479841779,"asset_class":"STOCKS","currency":"USD","logo_url":"https://cdn.profit.com/logo/stocks/TSLA.US.png","volume":75699525.0,"broker":"NASDAQ","ohlc_week":{"open":393.26,"high":402.49,"low":387.4,"close":394.94}}
