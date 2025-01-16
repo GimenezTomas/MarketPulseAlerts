@@ -5,8 +5,10 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tomas.market.pulse.alerts.clients.market.crypto.coin_gecko.CoinGeckoCryptoDTO;
@@ -22,15 +24,6 @@ public class ProfitApiClient {
   public ProfitApiClient(@Qualifier("profitClient") WebClient profitApiWebClient, ObjectMapper objectMapper) {
     this.profitApiWebClient = profitApiWebClient;
     this.objectMapper = objectMapper;
-  }
-
-  public Mono<StockProfitDTO> fetchMarketData(String symbol) {
-    return profitApiWebClient.get()
-        .uri(uriBuilder -> uriBuilder
-            .path("/market-data/quote/{symbol}")
-            .build(symbol))
-        .retrieve()
-        .bodyToMono(new ParameterizedTypeReference<StockProfitDTO>(){});
   }
 
   public Mono<List<StockProfitDTO>> fetchStocksData() {
@@ -50,5 +43,14 @@ public class ProfitApiClient {
                 .map(item -> objectMapper.convertValue(item, StockProfitDTO.class))
                 .toList();
         });
+  }
+
+  public Mono<StockProfitDTO> fetchStockById(String id){
+    return profitApiWebClient.get()
+        .uri(uriBuilder -> uriBuilder
+            .path("/market-data/quote/{id}")
+            .build(id))
+        .retrieve()
+        .bodyToMono(new ParameterizedTypeReference<StockProfitDTO>() {});
   }
 }

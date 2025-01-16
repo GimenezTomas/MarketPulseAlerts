@@ -28,7 +28,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web' //TODO algo pasa aca que si saco esto rompe, creo que es xq entiende que es una app no MVC no se...
 
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
-	implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.2.0' //TODO hacer funcionar el swagger
+	implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.0.4")//TODO hacer andar el swagger
+
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 
 	//JPA and Postgres
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

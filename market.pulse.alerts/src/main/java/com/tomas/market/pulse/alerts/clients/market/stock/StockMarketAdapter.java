@@ -2,7 +2,9 @@ package com.tomas.market.pulse.alerts.clients.market.stock;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.tomas.market.pulse.alerts.clients.market.MarketDataAdapter;
 import com.tomas.market.pulse.alerts.clients.market.stock.profit.ProfitApiClient;
@@ -28,6 +30,14 @@ public class StockMarketAdapter implements MarketDataAdapter<Stock> {
 
   @Override
   public Mono<Stock> fetchById(String id) {
+    return profitApiClient.fetchStockById(id)
+        .flatMap(stock -> stock.symbol() == null
+            ? Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found"))
+            : Mono.just(new Stock(stock.symbol(), stock.name(), stock.price())));
+  }
+
+  @Override
+  public Mono<List<Stock>> fetchByIds(List<String> ids) {
     return null;
   }
 

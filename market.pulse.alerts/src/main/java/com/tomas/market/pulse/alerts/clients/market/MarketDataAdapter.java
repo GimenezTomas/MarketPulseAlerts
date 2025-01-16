@@ -10,4 +10,6 @@ public interface MarketDataAdapter<E extends FinancialInstrument> {
   Mono<List<E>> fetchMarketData();
 
   Mono<E> fetchById(String id);
+
+  Mono<List<E>> fetchByIds(List<String> ids);
 }

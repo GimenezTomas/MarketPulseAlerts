@@ -40,22 +40,18 @@ public class SubscriptionEntity {
     private String email;
 
     @NotNull
-    @Min(value = 0, message = "Upper threshold must be non-negative")
     @Column(name = "upper_threshold", nullable = false)
     private int upperThreshold;
 
     @NotNull
-    @Min(value = 0, message = "Lower threshold must be non-negative")
     @Column(name = "lower_threshold", nullable = false)
     private int lowerThreshold;
 
     @NotNull
-    @Min(value = 0, message = "Original price must be non-negative")
     @Column(name = "original_price", nullable = false)
     private double originalPrice;
 
     @NotNull
-    @Min(value = 0, message = "Current price must be non-negative")
     @Column(name = "current_price", nullable = false)
     private double currentPrice;
 
