@@ -9,6 +9,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.StreamSupport;
 
 import com.tomas.market.pulse.alerts.api.dtos.FinancialInstrumentResponse;
 import com.tomas.market.pulse.alerts.clients.market.MarketDataAdapter;
@@ -16,17 +17,21 @@ import com.tomas.market.pulse.alerts.model.CryptoCurrency;
 import com.tomas.market.pulse.alerts.model.FinancialInstrument;
 import com.tomas.market.pulse.alerts.model.MarketType;
 import com.tomas.market.pulse.alerts.model.Stock;
-import com.tomas.market.pulse.alerts.model.SubscriptionEntity;
+import com.tomas.market.pulse.alerts.model.entities.FinancialInstrumentEntity;
+import com.tomas.market.pulse.alerts.model.entities.SubscriptionEntity;
+import com.tomas.market.pulse.alerts.repositories.FinancialInstrumentEntityRepository;
 import com.tomas.market.pulse.alerts.repositories.SubscriptionEntityRepository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import reactor.core.publisher.Mono;
@@ -39,6 +44,8 @@ class MarketHubServiceImplTest {
   private MarketDataAdapter<Stock> stockMarketAdapter;
   @Mock
   private SubscriptionEntityRepository subscriptionRepository;
+  @Mock
+  private FinancialInstrumentEntityRepository financialInstrumentRepository;
   private CryptoCurrency cryptoCurrency1;
   private CryptoCurrency cryptoCurrency2;
   private Stock stock1;
@@ -48,7 +55,7 @@ class MarketHubServiceImplTest {
   void setUp() {
     MockitoAnnotations.openMocks(this);
 
-    marketHubService = new MarketHubServiceImpl(cryptoMarketAdapter, stockMarketAdapter, subscriptionRepository);
+    marketHubService = new MarketHubServiceImpl(cryptoMarketAdapter, stockMarketAdapter, subscriptionRepository, financialInstrumentRepository);
 
     when(cryptoMarketAdapter.fetchMarketData()).thenReturn(Mono.just(new ArrayList<>()));
     when(stockMarketAdapter.fetchMarketData()).thenReturn(Mono.just(new ArrayList<>()));
@@ -64,54 +71,109 @@ class MarketHubServiceImplTest {
   void shouldReturnEmptyListOfFinancialInstrumentsWhenNoInstrumentsAreAvailable() {
     FinancialInstrumentResponse financialInstrumentList = marketHubService.getAll();
 
-    assertEquals(0, financialInstrumentList.getCrypto().size());
-    assertEquals(0, financialInstrumentList.getStock().size());
+    assertEquals(0, financialInstrumentList.crypto().size());
+    assertEquals(0, financialInstrumentList.stock().size());
   }
 
   @Test
   void shouldReturnListOfFinancialInstrumentsWithOneElementWhenOneCryptoCurrencyIsAvailable() {
-    Mono<List<CryptoCurrency>> cryptoCurrenciesMono = Mono.just(List.of(cryptoCurrency1));
-    when(cryptoMarketAdapter.fetchMarketData()).thenReturn(cryptoCurrenciesMono);
+    List<FinancialInstrumentEntity> cryptoCurrencies = List.of(FinancialInstrumentEntity.builder()
+        .symbol(cryptoCurrency1.getSymbol())
+        .name(cryptoCurrency1.getName())
+        .marketType(MarketType.CRYPTO)
+        .build());
+    var expectedCryptoCurrency = cryptoCurrency1;
+    expectedCryptoCurrency.setPrice(0);
 
+    when(financialInstrumentRepository.findAll()).thenReturn(cryptoCurrencies);
     FinancialInstrumentResponse financialInstrumentList = marketHubService.getAll();
 
-    assertEqualsListFinancialInstruments(List.of(cryptoCurrency1), financialInstrumentList.getCrypto());
+    assertEqualsListFinancialInstruments(List.of(expectedCryptoCurrency), financialInstrumentList.crypto());
   }
 
   @Test
   void shouldReturnListOfFinancialInstrumentsWithTwoElementsWhenTwoCurrenciesAreAvailable(){
-    Mono<List<CryptoCurrency>> cryptoCurrenciesMono = Mono.just(List.of(cryptoCurrency1, cryptoCurrency2));
-    when(cryptoMarketAdapter.fetchMarketData()).thenReturn(cryptoCurrenciesMono);
+    List<FinancialInstrumentEntity> cryptoCurrencies = List.of(FinancialInstrumentEntity.builder()
+        .symbol(cryptoCurrency1.getSymbol())
+        .name(cryptoCurrency1.getName())
+        .marketType(MarketType.CRYPTO)
+        .build(),
+      FinancialInstrumentEntity.builder()
+        .symbol(cryptoCurrency2.getSymbol())
+        .name(cryptoCurrency2.getName())
+        .marketType(MarketType.CRYPTO)
+        .build()
+    );
 
-    FinancialInstrumentResponse financialInstrumentResponse = marketHubService.getAll();
+    var expectedCryptoCurrencies = List.of(cryptoCurrency1, cryptoCurrency2);
+    expectedCryptoCurrencies.forEach(c -> c.setPrice(0));
 
-    assertEqualsListFinancialInstruments(List.of(cryptoCurrency1, cryptoCurrency2), financialInstrumentResponse.getCrypto());
+    when(financialInstrumentRepository.findAll()).thenReturn(cryptoCurrencies);
+    FinancialInstrumentResponse financialInstrumentList = marketHubService.getAll();
+
+    assertEqualsListFinancialInstruments(expectedCryptoCurrencies, financialInstrumentList.crypto());
   }
 
   @Test
   void shouldReturnListOfFinancialInstrumentsWithTwoElementsWhenTwoStocksAreAvailable(){
-    Mono<List<Stock>> stockListMono = Mono.just(List.of(stock1, stock2));
-    when(stockMarketAdapter.fetchMarketData()).thenReturn(stockListMono);
+    List<FinancialInstrumentEntity> stocks = List.of(FinancialInstrumentEntity.builder()
+            .symbol(stock1.getSymbol())
+            .name(stock1.getName())
+            .marketType(MarketType.STOCK)
+            .build(),
+        FinancialInstrumentEntity.builder()
+            .symbol(stock2.getSymbol())
+            .name(stock2.getName())
+            .marketType(MarketType.STOCK)
+            .build()
+    );
 
-    FinancialInstrumentResponse financialInstrumentResponse = marketHubService.getAll();
+    var expectedStocks = List.of(stock1, stock2);
+    expectedStocks.forEach(s -> s.setPrice(0));
 
-    assertEqualsListFinancialInstruments(List.of(stock1, stock2), financialInstrumentResponse.getStock());
+    when(financialInstrumentRepository.findAll()).thenReturn(stocks);
+    FinancialInstrumentResponse financialInstrumentList = marketHubService.getAll();
+
+    assertEqualsListFinancialInstruments(expectedStocks, financialInstrumentList.stock());
   }
 
   @Test
   void shouldReturnListOfFinancialInstrumentsWhenCryptoAndStocksAreAvailable() {
-    Mono<List<CryptoCurrency>> cryptoCurrenciesMono = Mono.just(List.of(cryptoCurrency1, cryptoCurrency2));
-    when(cryptoMarketAdapter.fetchMarketData()).thenReturn(cryptoCurrenciesMono);
+    List<FinancialInstrumentEntity> instruments = List.of(FinancialInstrumentEntity.builder()
+            .symbol(cryptoCurrency1.getSymbol())
+            .name(cryptoCurrency1.getName())
+            .marketType(MarketType.CRYPTO)
+            .build(),
+        FinancialInstrumentEntity.builder()
+            .symbol(cryptoCurrency2.getSymbol())
+            .name(cryptoCurrency2.getName())
+            .marketType(MarketType.CRYPTO)
+            .build(),
+        FinancialInstrumentEntity.builder()
+            .symbol(stock1.getSymbol())
+            .name(stock1.getName())
+            .marketType(MarketType.STOCK)
+            .build(),
+        FinancialInstrumentEntity.builder()
+            .symbol(stock2.getSymbol())
+            .name(stock2.getName())
+            .marketType(MarketType.STOCK)
+            .build()
+    );
 
-    Mono<List<Stock>> stockListMono = Mono.just(List.of(stock1, stock2));
-    when(stockMarketAdapter.fetchMarketData()).thenReturn(stockListMono);
+    var expectedCryptoCurrencies = List.of(cryptoCurrency1, cryptoCurrency2);
+    expectedCryptoCurrencies.forEach(c -> c.setPrice(0));
 
+    var expectedStocks = List.of(stock1, stock2);
+    expectedStocks.forEach(s -> s.setPrice(0));
+
+    when(financialInstrumentRepository.findAll()).thenReturn(instruments);
     FinancialInstrumentResponse financialInstrumentResponse = marketHubService.getAll();
 
-    assertEqualsListFinancialInstruments(List.of(cryptoCurrency1, cryptoCurrency2), financialInstrumentResponse.getCrypto());
-    assertEqualsListFinancialInstruments(List.of(stock1, stock2), financialInstrumentResponse.getStock());
+    assertEqualsListFinancialInstruments(List.of(cryptoCurrency1, cryptoCurrency2), financialInstrumentResponse.crypto());
+    assertEqualsListFinancialInstruments(List.of(stock1, stock2), financialInstrumentResponse.stock());
   }
-
+  
   @Test
   void shouldAllowUserSubscribeToCryptoCurrencyNotificationsWhenItExists(){
     String cod = "cod1";
@@ -218,6 +280,117 @@ class MarketHubServiceImplTest {
   }
 
   @Test
+  void shouldPersistAllCryptoCurrenciesWhenFinancialInstrumentsTableIsEmpty() {
+    List<CryptoCurrency> cryptoCurrencies = List.of(cryptoCurrency1);
+    when(cryptoMarketAdapter.fetchMarketData()).thenReturn(Mono.just(cryptoCurrencies));
+    when(stockMarketAdapter.fetchMarketData()).thenReturn(Mono.just(new ArrayList<>()));
+    when(financialInstrumentRepository.findAllBySymbolIn(cryptoCurrencies.stream()
+        .map(CryptoCurrency::getSymbol)
+        .toList()))
+        .thenReturn(new ArrayList<>());
+
+    marketHubService.syncNewFinancialInstruments();
+
+    verify(financialInstrumentRepository).findAllBySymbolIn(cryptoCurrencies.stream()
+        .map(CryptoCurrency::getSymbol)
+        .toList());
+
+    verify(financialInstrumentRepository).saveAll(argThat(savedIterable -> {
+      List<?> savedList = StreamSupport.stream(savedIterable.spliterator(), false).toList();
+      return savedList.size() == cryptoCurrencies.size() &&
+          savedList.stream().allMatch(item -> cryptoCurrencies.stream()
+              .anyMatch(crypto -> crypto.getSymbol().equals(((FinancialInstrumentEntity) item).getSymbol())));
+    }));
+
+    verify(cryptoMarketAdapter).fetchMarketData();
+    verifyNoMoreInteractions(financialInstrumentRepository, cryptoMarketAdapter, stockMarketAdapter);
+  }
+
+  @Test
+  void shouldPersistAllStocksWhenFinancialInstrumentsTableIsEmpty() {
+    List<Stock> stocks = List.of(stock1);
+    when(stockMarketAdapter.fetchMarketData()).thenReturn(Mono.just(stocks));
+    when(cryptoMarketAdapter.fetchMarketData()).thenReturn(Mono.just(new ArrayList<>()));
+    when(financialInstrumentRepository.findAllBySymbolIn(stocks.stream()
+        .map(Stock::getSymbol)
+        .toList()))
+        .thenReturn(new ArrayList<>());
+
+    marketHubService.syncNewFinancialInstruments();
+
+    verify(financialInstrumentRepository).findAllBySymbolIn(stocks.stream()
+        .map(Stock::getSymbol)
+        .toList());
+
+    verify(financialInstrumentRepository).saveAll(argThat(savedIterable -> {
+      List<?> savedList = StreamSupport.stream(savedIterable.spliterator(), false).toList();
+      return savedList.size() == stocks.size() &&
+          savedList.stream().allMatch(item -> stocks.stream()
+              .anyMatch(stock -> stock.getSymbol().equals(((FinancialInstrumentEntity) item).getSymbol())));
+    }));
+
+    verify(stockMarketAdapter).fetchMarketData();
+    verify(cryptoMarketAdapter).fetchMarketData();
+    verifyNoMoreInteractions(financialInstrumentRepository, cryptoMarketAdapter, stockMarketAdapter);
+  }
+
+  @Test
+  void shouldNotPersistExistingCryptoCurrencies() {
+    List<CryptoCurrency> cryptoCurrencies = List.of(cryptoCurrency1, cryptoCurrency2);
+    when(cryptoMarketAdapter.fetchMarketData()).thenReturn(Mono.just(cryptoCurrencies));
+    when(stockMarketAdapter.fetchMarketData()).thenReturn(Mono.just(new ArrayList<>()));
+    when(financialInstrumentRepository.findAllBySymbolIn(cryptoCurrencies.stream()
+        .map(CryptoCurrency::getSymbol)
+        .toList()))
+        .thenReturn(List.of(FinancialInstrumentEntity.builder().symbol(cryptoCurrency2.getSymbol()).build()));
+
+    marketHubService.syncNewFinancialInstruments();
+
+    verify(financialInstrumentRepository).findAllBySymbolIn(cryptoCurrencies.stream()
+        .map(CryptoCurrency::getSymbol)
+        .toList());
+
+    verify(financialInstrumentRepository).saveAll(argThat(savedIterable -> {
+      List<?> savedList = StreamSupport.stream(savedIterable.spliterator(), false).toList();
+      return savedList.size() == 1 &&
+          savedList.stream().allMatch(item -> item instanceof FinancialInstrumentEntity &&
+              cryptoCurrency1.getSymbol().equals(((FinancialInstrumentEntity) item).getSymbol()));
+    }));
+
+    verify(cryptoMarketAdapter).fetchMarketData();
+    verify(stockMarketAdapter).fetchMarketData();
+    verifyNoMoreInteractions(financialInstrumentRepository, cryptoMarketAdapter, stockMarketAdapter);
+  }
+
+  @Test
+  void shouldNotPersistExistingStocks() {
+    List<Stock> stocks = List.of(stock1, stock2);
+    when(stockMarketAdapter.fetchMarketData()).thenReturn(Mono.just(stocks));
+    when(cryptoMarketAdapter.fetchMarketData()).thenReturn(Mono.just(new ArrayList<>()));
+    when(financialInstrumentRepository.findAllBySymbolIn(stocks.stream()
+        .map(Stock::getSymbol)
+        .toList()))
+        .thenReturn(List.of(FinancialInstrumentEntity.builder().symbol(stock2.getSymbol()).build()));
+
+    marketHubService.syncNewFinancialInstruments();
+
+    verify(financialInstrumentRepository).findAllBySymbolIn(stocks.stream()
+        .map(Stock::getSymbol)
+        .toList());
+
+    verify(financialInstrumentRepository).saveAll(argThat(savedIterable -> {
+      List<?> savedList = StreamSupport.stream(savedIterable.spliterator(), false).toList();
+      return savedList.size() == 1 &&
+          savedList.stream().allMatch(item -> item instanceof FinancialInstrumentEntity &&
+              stock1.getSymbol().equals(((FinancialInstrumentEntity) item).getSymbol()));
+    }));
+
+    verify(stockMarketAdapter).fetchMarketData();
+    verify(cryptoMarketAdapter).fetchMarketData();
+    verifyNoMoreInteractions(financialInstrumentRepository, cryptoMarketAdapter, stockMarketAdapter);
+  }
+
+  @Test
   void shouldReturnEmptyListWhenUserHasNoSubscription(){
     String email = "email@gmail.com";
     List<MarketType> markets = List.of(MarketType.CRYPTO, MarketType.STOCK);
@@ -225,8 +398,8 @@ class MarketHubServiceImplTest {
     when(subscriptionRepository.findAllByEmail(email)).thenReturn(new ArrayList<>());
     FinancialInstrumentResponse response = marketHubService.getSubscribedFinancialInstrumentsByUserAndMarketTypes(email, markets);
 
-    assertEquals(0, response.getStock().size());
-    assertEquals(0, response.getCrypto().size());
+    assertEquals(0, response.stock().size());
+    assertEquals(0, response.crypto().size());
   }
 
   @Test
@@ -238,9 +411,9 @@ class MarketHubServiceImplTest {
     when(subscriptionRepository.findAllByEmail(email)).thenReturn(List.of(expectedSubscription));
     FinancialInstrumentResponse response = marketHubService.getSubscribedFinancialInstrumentsByUserAndMarketTypes(email, markets);
 
-    assertEquals(0, response.getStock().size());
-    assertEquals(1, response.getCrypto().size());
-    assertEquals(List.of(expectedSubscription), response.getCrypto());
+    assertEquals(0, response.stock().size());
+    assertEquals(1, response.crypto().size());
+    assertEquals(List.of(expectedSubscription.getFinancialInstrumentId()), response.crypto().get(0).getSymbol());
   }
   /*@Test
   void shouldReturnOneElementListWhenUserHasOnlyOneCryptoCurrencySubscription(){

@@ -47,4 +47,10 @@ public class MarketHubController {
 
     return ResponseEntity.noContent().build();
   }
+
+  @PostMapping("/sync")
+  public ResponseEntity<String> syncFinancialInstruments(){
+    marketHubService.syncNewFinancialInstruments();
+    return ResponseEntity.ok("Financial instruments synchronization completed successfully.");
+  }
 }

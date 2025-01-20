@@ -1,4 +1,4 @@
-package com.tomas.market.pulse.alerts.model;
+package com.tomas.market.pulse.alerts.model.entities;
 
 import java.time.Instant;
 

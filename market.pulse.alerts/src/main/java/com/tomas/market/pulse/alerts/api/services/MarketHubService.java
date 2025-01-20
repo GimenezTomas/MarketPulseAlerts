@@ -10,4 +10,5 @@ public interface MarketHubService {
   void subscribeUserToFinancialInstrument(String email, String financialInstrumentId, MarketType marketType, int upperThreshold, int lowerThreshold);
   void unSubscribeUserFromFinancialInstrumentNotifications(String email, String financialInstrumentId);
   FinancialInstrumentResponse getSubscribedFinancialInstrumentsByUserAndMarketTypes(String email, List<MarketType> markets);
+  void syncNewFinancialInstruments();
 }

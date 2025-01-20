@@ -8,6 +8,6 @@ import lombok.Data;
 public abstract class FinancialInstrument {
   protected String symbol;
   protected String name;
-  //TODO sacar price
+  //TODO sacar price o por lo menos que sea nulleable
   protected double price;
 }
