@@ -21,10 +21,7 @@ public class CryptoMarketAdapter implements MarketDataAdapter<CryptoCurrency> {
 
   @Override
   public Mono<List<CryptoCurrency>> fetchMarketData() {
-    return coinGeckoApiClient.fetchMarketData(IDS)
-        .map(dtoList -> dtoList.stream()
-            .map(dto -> new CryptoCurrency(dto.symbol(), dto.name(), dto.currentPrice()))
-            .toList());
+    return this.fetchByIds(IDS);
   }
 
   @Override
@@ -38,6 +35,9 @@ public class CryptoMarketAdapter implements MarketDataAdapter<CryptoCurrency> {
 
   @Override
   public Mono<List<CryptoCurrency>> fetchByIds(List<String> ids) {
-    return null;
+    return coinGeckoApiClient.fetchMarketData(ids)
+        .map(dtoList -> dtoList.stream()
+            .map(dto -> new CryptoCurrency(dto.symbol(), dto.name(), dto.currentPrice()))
+            .toList());
   }
 }

@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,13 +21,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @Validated
-@RequestMapping("/api/markets")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 public class MarketHubController {
 
   private final MarketHubService marketHubService;
 
-  @GetMapping
+  @GetMapping("/markets")
   public FinancialInstrumentResponse getAllFinancialInstruments() {
     return marketHubService.getAll();
   }
@@ -52,5 +53,12 @@ public class MarketHubController {
   public ResponseEntity<String> syncFinancialInstruments(){
     marketHubService.syncNewFinancialInstruments();
     return ResponseEntity.ok("Financial instruments synchronization completed successfully.");
+  }
+
+  @GetMapping("/subscriptions/{email}/financial-instruments")
+  public ResponseEntity<FinancialInstrumentResponse> getFinancialInstrumentsByEmail(
+      @PathVariable String email) {
+    FinancialInstrumentResponse financialInstruments = marketHubService.getSubscribedFinancialInstrumentsByUser(email);
+    return new ResponseEntity<>(financialInstruments, HttpStatus.OK);
   }
 }

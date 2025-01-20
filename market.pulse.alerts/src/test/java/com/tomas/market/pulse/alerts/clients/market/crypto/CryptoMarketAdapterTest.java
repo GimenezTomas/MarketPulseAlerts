@@ -28,7 +28,7 @@ class CryptoMarketAdapterTest {
   private CoinGeckoApiClient coinGeckoApiClient;
 
   @Test
-  void shouldFetchMarketDataAndMapToStockList() {
+  void shouldFetchMarketDataAndMapToCryptoCurrenciesList() {
     List<CryptoCurrency> expectedCryptos = List.of(new CryptoCurrency("symbol1", "name1", 0), new CryptoCurrency("symbol2", "name2", 1));
 
     when(coinGeckoApiClient.fetchMarketData(anyList())).thenReturn(
@@ -41,7 +41,7 @@ class CryptoMarketAdapterTest {
 
 
   @Test
-  void shouldFetchByIdAndMapToStock(){
+  void shouldFetchByIdAndMapToCryptoCurrency(){
     CryptoCurrency expectedCrypto = new CryptoCurrency("symbol1", "name1", 0);
 
     when(coinGeckoApiClient.fetchMarketData(anyList())).thenReturn(
@@ -61,6 +61,26 @@ class CryptoMarketAdapterTest {
 
     var e = assertThrows(ResponseStatusException.class, () -> cryptoMarketAdapter.fetchById(symbol).block());
     assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
+  }
+
+  @Test
+  void shouldFetchByIdsAndMapToCryptoCurrenciesList(){
+    CoinGeckoCryptoDTO coin1 = new CoinGeckoCryptoDTO("id1", "symbol1", "name1", 900);
+    CoinGeckoCryptoDTO coin2 = new CoinGeckoCryptoDTO("id2", "symbol2", "name2", 700);
+
+    when(coinGeckoApiClient.fetchMarketData(List.of(coin1.symbol(), coin2.symbol()))).thenReturn(Mono.just(List.of(coin1, coin2)));
+    Mono<List<CryptoCurrency>> response = cryptoMarketAdapter.fetchByIds(List.of(coin1.symbol(), coin2.symbol()));
+    var cryptoCurrencies = response.block();
+
+    assertEquals(2, cryptoCurrencies.size());
+
+    assertEquals(coin1.symbol(), cryptoCurrencies.get(0).getSymbol());
+    assertEquals(coin1.name(), cryptoCurrencies.get(0).getName());
+    assertEquals(coin1.currentPrice(), cryptoCurrencies.get(0).getPrice());
+
+    assertEquals(coin2.symbol(), cryptoCurrencies.get(1).getSymbol());
+    assertEquals(coin2.name(), cryptoCurrencies.get(1).getName());
+    assertEquals(coin2.currentPrice(), cryptoCurrencies.get(1).getPrice());
   }
 
 }

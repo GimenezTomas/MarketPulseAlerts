@@ -13,6 +13,7 @@ import com.tomas.market.pulse.alerts.model.CryptoCurrency;
 import com.tomas.market.pulse.alerts.model.Stock;
 
 import lombok.RequiredArgsConstructor;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RequiredArgsConstructor
@@ -38,7 +39,9 @@ public class StockMarketAdapter implements MarketDataAdapter<Stock> {
 
   @Override
   public Mono<List<Stock>> fetchByIds(List<String> ids) {
-    return null;
+    return Flux.fromIterable(ids)
+        .flatMap(id -> fetchById(id).onErrorResume(e -> Mono.empty()))
+        .collectList();
   }
 
   //TODO hay que encontrarle la vuelta para que todas las llamadas de cada uno de sus quotes (tesla x ej) los haga de forma asincrona

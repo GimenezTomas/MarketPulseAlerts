@@ -59,18 +59,21 @@ public class MarketHubServiceImpl implements MarketHubService{
     return new FinancialInstrumentResponse(cryptoCurrencies, stocks);
   }
 
+  //el flujo creo deberia ser entra simbolo y tipo de mercado -> financialIntrumentEntity -> funcion que sabe como
+
   @Override
-  public void subscribeUserToFinancialInstrument(String email, String financialInstrumentId, MarketType marketType,
+  public void subscribeUserToFinancialInstrument(String email, String symbol, MarketType marketType,
       int upperThreshold, int lowerThreshold) {
-    if (subscriptionRepository.existsSubscriptionEntityByFinancialInstrumentIdAndEmail(financialInstrumentId, email))
-      throw new ResponseStatusException(HttpStatus.CONFLICT, String.format("%s is already subscribed to %s", email, financialInstrumentId));
+    if (subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(symbol, email))
+      throw new ResponseStatusException(HttpStatus.CONFLICT, String.format("%s is already subscribed to %s", email, symbol));
 
     var adapter = getMarketAdapter(marketType);
-    var result = adapter.fetchById(financialInstrumentId).block();
+    var financialInstrument = financialInstrumentRepository.findBySymbolAndMarketType(symbol, marketType).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Financial instrument not found"));
+    var result = adapter.fetchById(symbol).block();
 
     SubscriptionEntity subscriptionEntity = SubscriptionEntity.builder()
         .email(email)
-        .financialInstrumentId(financialInstrumentId)
+        .financialInstrument(financialInstrument)
         .currentPrice(result.getPrice())
         .originalPrice(result.getPrice())
         .lowerThreshold(lowerThreshold)
@@ -82,20 +85,33 @@ public class MarketHubServiceImpl implements MarketHubService{
   @Transactional
   @Override
   public void unSubscribeUserFromFinancialInstrumentNotifications(String email, String financialInstrumentId) {
-    subscriptionRepository.deleteByFinancialInstrumentIdAndEmail(financialInstrumentId, email);
+    subscriptionRepository.deleteByFinancialInstrument_SymbolAndEmail(financialInstrumentId, email);
   }
 
   @Override
-  public FinancialInstrumentResponse getSubscribedFinancialInstrumentsByUserAndMarketTypes(String email,
-      List<MarketType> markets) {
-    List<CryptoCurrency> cryptoCurrencies = new ArrayList<>();
-    List<Stock> stocks = new ArrayList<>();
-
+  public FinancialInstrumentResponse getSubscribedFinancialInstrumentsByUser(String email) {
     var subscriptions = subscriptionRepository.findAllByEmail(email);
-    List<String> intrumentsIds = subscriptions.stream().map(SubscriptionEntity::getFinancialInstrumentId).toList();
+    List<FinancialInstrumentEntity> instrumentEntities = subscriptions.stream()
+        .map(SubscriptionEntity::getFinancialInstrument)
+        .toList();
 
+    //TODO: rever tema de los IDS, debido a que depende del adapter que usar. A lo mejor lo propio seria pasarle un FinancialInstrument y ya (o un codigo xq resuelvo el probelma en la subscirpcion)
+    var cryptoSymbols = instrumentEntities.stream()
+        .filter(i -> i.getMarketType().equals(MarketType.CRYPTO))
+        .map(FinancialInstrumentEntity::getName)
+        .toList();
 
-    return new FinancialInstrumentResponse(cryptoCurrencies, stocks);
+    var stockNames = instrumentEntities.stream()
+        .filter(i -> i.getMarketType().equals(MarketType.STOCK))
+        .map(FinancialInstrumentEntity::getSymbol)
+        .toList();
+
+    Mono<List<CryptoCurrency>> cryptoCurrencies = !cryptoSymbols.isEmpty() ? cryptoMarketAdapter.fetchByIds(cryptoSymbols) : Mono.just(new ArrayList<>());
+    Mono<List<Stock>> stocks = !stockNames.isEmpty() ? stockMarketAdapter.fetchByIds(stockNames) : Mono.just(new ArrayList<>());
+
+    return Mono.zip(cryptoCurrencies, stocks)
+        .map(tuple -> new FinancialInstrumentResponse(tuple.getT1(), tuple.getT2()))
+        .block();
   }
 
   @Override

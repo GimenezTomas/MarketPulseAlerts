@@ -9,6 +9,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.StreamSupport;
 
 import com.tomas.market.pulse.alerts.api.dtos.FinancialInstrumentResponse;
@@ -25,6 +26,7 @@ import com.tomas.market.pulse.alerts.repositories.SubscriptionEntityRepository;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doThrow;
@@ -173,7 +175,7 @@ class MarketHubServiceImplTest {
     assertEqualsListFinancialInstruments(List.of(cryptoCurrency1, cryptoCurrency2), financialInstrumentResponse.crypto());
     assertEqualsListFinancialInstruments(List.of(stock1, stock2), financialInstrumentResponse.stock());
   }
-  
+
   @Test
   void shouldAllowUserSubscribeToCryptoCurrencyNotificationsWhenItExists(){
     String cod = "cod1";
@@ -182,31 +184,35 @@ class MarketHubServiceImplTest {
     int upperThreshold = 10;
     int lowerThreshold = 10;
 
-    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrumentIdAndEmail(anyString(), anyString())).thenReturn(false);
+    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(anyString(), anyString())).thenReturn(false);
+    when(financialInstrumentRepository.findBySymbolAndMarketType(cod, marketType)).thenReturn(Optional.of(
+        FinancialInstrumentEntity.builder().build()));
     when(cryptoMarketAdapter.fetchById(cod)).thenReturn(Mono.just(cryptoCurrency1));
 
     marketHubService.subscribeUserToFinancialInstrument(email, cod, marketType, upperThreshold, lowerThreshold);
 
-    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrumentIdAndEmail(cod, email);
+    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(cod, email);
     verify(subscriptionRepository).save(any());
     verify(cryptoMarketAdapter).fetchById(cod);
     verifyNoInteractions(stockMarketAdapter);
   }
 
   @Test
-  void shouldNotAllowSubscriptionToCryptoCurrencyNotificationsWhenDoesNotExist(){
+  void shouldNotAllowSubscriptionToCryptoCurrencyNotificationsWhenDoesNotExistInCryptoAdapter(){
     String cod = "cod1";
     String email = "email@gmail.com";
     MarketType marketType = MarketType.CRYPTO;
     int upperThreshold = 10;
     int lowerThreshold = 10;
 
-    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrumentIdAndEmail(anyString(), anyString())).thenReturn(false);
+    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(anyString(), anyString())).thenReturn(false);
+    when(financialInstrumentRepository.findBySymbolAndMarketType(cod, marketType)).thenReturn(Optional.of(
+        FinancialInstrumentEntity.builder().build()));
     doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Crypto currency not found")).when(cryptoMarketAdapter).fetchById(cod);
 
     ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> marketHubService.subscribeUserToFinancialInstrument(email, cod, marketType, upperThreshold, lowerThreshold));
 
-    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrumentIdAndEmail(cod, email);
+    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(cod, email);
     verify(cryptoMarketAdapter).fetchById(cod);
     verifyNoInteractions(stockMarketAdapter);
 
@@ -215,11 +221,11 @@ class MarketHubServiceImplTest {
 
   @Test
   void shouldThrowExceptionWhenUserIsAlreadySubscribedToTheFinancialInstrumentNotifications(){
-    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrumentIdAndEmail(anyString(), anyString())).thenReturn(true);
+    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(anyString(), anyString())).thenReturn(true);
 
     ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> marketHubService.subscribeUserToFinancialInstrument("", "", MarketType.CRYPTO, 0,0));
 
-    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrumentIdAndEmail(anyString(), anyString());
+    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(anyString(), anyString());
     verifyNoInteractions(cryptoMarketAdapter);
     verifyNoInteractions(stockMarketAdapter);
 
@@ -234,33 +240,37 @@ class MarketHubServiceImplTest {
     int upperThreshold = 10;
     int lowerThreshold = 10;
 
-    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrumentIdAndEmail(anyString(), anyString())).thenReturn(false);
+    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(anyString(), anyString())).thenReturn(false);
+    when(financialInstrumentRepository.findBySymbolAndMarketType(cod, marketType)).thenReturn(Optional.of(
+        FinancialInstrumentEntity.builder().build()));
     when(stockMarketAdapter.fetchById(cod)).thenReturn(Mono.just(stock1));
 
     marketHubService.subscribeUserToFinancialInstrument(email, cod, marketType, upperThreshold, lowerThreshold);
 
-    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrumentIdAndEmail(cod, email);
+    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(cod, email);
     verify(subscriptionRepository).save(any());
     verify(stockMarketAdapter).fetchById(cod);
     verifyNoInteractions(cryptoMarketAdapter);
   }
 
   @Test
-  void shouldNotAllowSubscriptionToStockNotificationsWhenDoesNotExist() {
+  void shouldNotAllowSubscriptionToStockNotificationsWhenDoesNotExistInStockAdapter() {
     String cod = "cod1";
     String email = "email@gmail.com";
     MarketType marketType = MarketType.STOCK;
     int upperThreshold = 10;
     int lowerThreshold = 10;
 
-    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrumentIdAndEmail(anyString(), anyString())).thenReturn(false);
+    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(anyString(), anyString())).thenReturn(false);
+    when(financialInstrumentRepository.findBySymbolAndMarketType(cod, marketType)).thenReturn(Optional.of(
+        FinancialInstrumentEntity.builder().build()));
     doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found")).when(stockMarketAdapter).fetchById(cod);
 
     ResponseStatusException e = assertThrows(ResponseStatusException.class, () ->
         marketHubService.subscribeUserToFinancialInstrument(email, cod, marketType, upperThreshold, lowerThreshold)
     );
 
-    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrumentIdAndEmail(cod, email);
+    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(cod, email);
     verify(subscriptionRepository, times(0)).save(any());
     verify(stockMarketAdapter).fetchById(cod);
     verifyNoInteractions(cryptoMarketAdapter);
@@ -270,13 +280,37 @@ class MarketHubServiceImplTest {
   }
 
   @Test
+  void shouldNotAllowSubscriptionToStockWhenStockIsNotPresentInFinancialInstrumentsTable(){
+    String cod = "cod1";
+    String email = "email@gmail.com";
+    MarketType marketType = MarketType.STOCK;
+    int upperThreshold = 10;
+    int lowerThreshold = 10;
+
+    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(anyString(), anyString())).thenReturn(false);
+    when(financialInstrumentRepository.findBySymbolAndMarketType(cod, marketType)).thenReturn(Optional.empty());
+
+    ResponseStatusException e = assertThrows(ResponseStatusException.class, () ->
+        marketHubService.subscribeUserToFinancialInstrument(email, cod, marketType, upperThreshold, lowerThreshold)
+    );
+
+    verify(financialInstrumentRepository).findBySymbolAndMarketType(cod, marketType);
+    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(cod, email);
+    verify(subscriptionRepository, times(0)).save(any());
+    verifyNoMoreInteractions(stockMarketAdapter);
+    verifyNoInteractions(cryptoMarketAdapter);
+
+    assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
+  }
+
+  @Test
   void shouldAllowUserToUnsubscribeFromFinancialInstrumentNotificationsWhenUserHasAnOngoingSubscription(){
     String cod = "cod1";
     String email = "email@gmail.com";
 
     marketHubService.unSubscribeUserFromFinancialInstrumentNotifications(email, cod);
 
-    verify(subscriptionRepository, times(1)).deleteByFinancialInstrumentIdAndEmail(cod, email);
+    verify(subscriptionRepository, times(1)).deleteByFinancialInstrument_SymbolAndEmail(cod, email);
   }
 
   @Test
@@ -303,7 +337,7 @@ class MarketHubServiceImplTest {
     }));
 
     verify(cryptoMarketAdapter).fetchMarketData();
-    verifyNoMoreInteractions(financialInstrumentRepository, cryptoMarketAdapter, stockMarketAdapter);
+    verifyNoMoreInteractions(financialInstrumentRepository, cryptoMarketAdapter);
   }
 
   @Test
@@ -396,7 +430,18 @@ class MarketHubServiceImplTest {
     List<MarketType> markets = List.of(MarketType.CRYPTO, MarketType.STOCK);
 
     when(subscriptionRepository.findAllByEmail(email)).thenReturn(new ArrayList<>());
-    FinancialInstrumentResponse response = marketHubService.getSubscribedFinancialInstrumentsByUserAndMarketTypes(email, markets);
+    FinancialInstrumentResponse response = marketHubService.getSubscribedFinancialInstrumentsByUser(email);
+
+    assertEquals(0, response.stock().size());
+    assertEquals(0, response.crypto().size());
+  }
+
+  @Test
+  void shouldReturnEmptyListWhenUserHasNotSubscriptions(){
+    String email = "email@gmail.com";
+    when(subscriptionRepository.findAllByEmail(email)).thenReturn(new ArrayList<>());
+
+    FinancialInstrumentResponse response = marketHubService.getSubscribedFinancialInstrumentsByUser(email);
 
     assertEquals(0, response.stock().size());
     assertEquals(0, response.crypto().size());
@@ -405,29 +450,48 @@ class MarketHubServiceImplTest {
   @Test
   void shouldReturnOneElementListWhenUserHasOnlyOneCryptoCurrencySubscription(){
     String email = "email@gmail.com";
-    List<MarketType> markets = List.of(MarketType.CRYPTO);
-    SubscriptionEntity expectedSubscription = SubscriptionEntity.builder().financialInstrumentId(cryptoCurrency1.getSymbol()).build();
+    FinancialInstrumentEntity expectedCryptoCurrency = FinancialInstrumentEntity.builder()
+        .symbol(cryptoCurrency1.getSymbol())
+        .marketType(MarketType.CRYPTO)
+        .name(cryptoCurrency1.getName())
+        .build();
+    SubscriptionEntity expectedSubscription = SubscriptionEntity.builder()
+        .financialInstrument(expectedCryptoCurrency)
+        .email(email)
+        .build();
 
     when(subscriptionRepository.findAllByEmail(email)).thenReturn(List.of(expectedSubscription));
-    FinancialInstrumentResponse response = marketHubService.getSubscribedFinancialInstrumentsByUserAndMarketTypes(email, markets);
+    when(cryptoMarketAdapter.fetchByIds(List.of(cryptoCurrency1.getSymbol()))).thenReturn(Mono.just(List.of(cryptoCurrency1)));
+    when(stockMarketAdapter.fetchByIds(anyList())).thenReturn(Mono.just(new ArrayList<>()));
+    FinancialInstrumentResponse response = marketHubService.getSubscribedFinancialInstrumentsByUser(email);
 
     assertEquals(0, response.stock().size());
     assertEquals(1, response.crypto().size());
-    assertEquals(List.of(expectedSubscription.getFinancialInstrumentId()), response.crypto().get(0).getSymbol());
+    assertEqualsListFinancialInstruments(List.of(cryptoCurrency1), response.crypto());
   }
-  /*@Test
-  void shouldReturnOneElementListWhenUserHasOnlyOneCryptoCurrencySubscription(){
+
+  @Test
+  void shouldReturnOneElementListWhenUserHasOnlyOneStockSubscription(){
     String email = "email@gmail.com";
-    List<MarketType> markets = List.of(MarketType.CRYPTO, MarketType.STOCK);
-    List<SubscriptionEntity> expectedSubscriptions = List.of(
-        SubscriptionEntity.builder().financialInstrumentId(cryptoCurrency1.getSymbol()).build(),
-        SubscriptionEntity.builder().financialInstrumentId(stock1.getSymbol()).build()
-    );
+    FinancialInstrumentEntity expectedStock = FinancialInstrumentEntity.builder()
+        .symbol(stock1.getSymbol())
+        .marketType(MarketType.STOCK)
+        .name(stock1.getName())
+        .build();
+    SubscriptionEntity expectedSubscription = SubscriptionEntity.builder()
+        .financialInstrument(expectedStock)
+        .email(email)
+        .build();
 
-    when(subscriptionRepository.findAllByEmail(email)).thenReturn(expectedSubscriptions);
-    marketHubService.getSubscribedFinancialInstrumentsByUserAndMarketTypes(email, markets);
+    when(subscriptionRepository.findAllByEmail(email)).thenReturn(List.of(expectedSubscription));
+    when(stockMarketAdapter.fetchByIds(List.of(stock1.getName()))).thenReturn(Mono.just(List.of(stock1)));
+    when(cryptoMarketAdapter.fetchByIds(anyList())).thenReturn(Mono.just(new ArrayList<>()));
+    FinancialInstrumentResponse response = marketHubService.getSubscribedFinancialInstrumentsByUser(email);
 
-  }*/
+    assertEquals(1, response.stock().size());
+    assertEquals(0, response.crypto().size());
+    assertEqualsListFinancialInstruments(List.of(stock1), response.stock());
+  }
 
   private void assertEqualsListFinancialInstruments(List<? extends FinancialInstrument> expected, List<? extends FinancialInstrument> current){
     assertEquals(expected.size(), current.size());
