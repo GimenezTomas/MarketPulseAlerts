@@ -18,6 +18,8 @@ import org.springframework.web.server.ResponseStatusException;
 import com.tomas.market.pulse.alerts.clients.market.crypto.coin_gecko.CoinGeckoApiClient;
 import com.tomas.market.pulse.alerts.clients.market.crypto.coin_gecko.CoinGeckoCryptoDTO;
 import com.tomas.market.pulse.alerts.model.CryptoCurrency;
+import com.tomas.market.pulse.alerts.model.MarketType;
+import com.tomas.market.pulse.alerts.model.entities.FinancialInstrumentEntity;
 
 import reactor.core.publisher.Mono;
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -42,24 +44,33 @@ class CryptoMarketAdapterTest {
 
   @Test
   void shouldFetchByIdAndMapToCryptoCurrency(){
+    var financialInstrumentEntity = FinancialInstrumentEntity.builder()
+        .symbol("symbol1")
+        .name("name1")
+        .marketType(MarketType.CRYPTO)
+        .build();
     CryptoCurrency expectedCrypto = new CryptoCurrency("symbol1", "name1", 0);
 
     when(coinGeckoApiClient.fetchMarketData(anyList())).thenReturn(
         Mono.just(List.of(new CoinGeckoCryptoDTO("id1", "symbol1", "name1", 0))));
 
-    Mono<CryptoCurrency> actualMono = cryptoMarketAdapter.fetchById("symbol1");
+    Mono<CryptoCurrency> actualMono = cryptoMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity);
 
     assertEquals(expectedCrypto, actualMono.block());
   }
 
   @Test
   void shouldThrowExceptionWhileFetchingByIdIfItDoesNotExist() {
-    String symbol = "symbol1";
+    var financialInstrumentEntity = FinancialInstrumentEntity.builder()
+        .symbol("symbol1")
+        .name("name1")
+        .marketType(MarketType.CRYPTO)
+        .build();
 
-    when(coinGeckoApiClient.fetchMarketData(List.of(symbol)))
+    when(coinGeckoApiClient.fetchMarketData(List.of(financialInstrumentEntity.getSymbol())))
         .thenReturn(Mono.just(List.of()));
 
-    var e = assertThrows(ResponseStatusException.class, () -> cryptoMarketAdapter.fetchById(symbol).block());
+    var e = assertThrows(ResponseStatusException.class, () -> cryptoMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity).block());
     assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
   }
 

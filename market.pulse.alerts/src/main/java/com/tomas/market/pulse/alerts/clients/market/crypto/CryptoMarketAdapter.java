@@ -9,6 +9,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.tomas.market.pulse.alerts.clients.market.MarketDataAdapter;
 import com.tomas.market.pulse.alerts.clients.market.crypto.coin_gecko.CoinGeckoApiClient;
 import com.tomas.market.pulse.alerts.model.CryptoCurrency;
+import com.tomas.market.pulse.alerts.model.entities.FinancialInstrumentEntity;
 
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
@@ -25,8 +26,8 @@ public class CryptoMarketAdapter implements MarketDataAdapter<CryptoCurrency> {
   }
 
   @Override
-  public Mono<CryptoCurrency> fetchById(String id) {
-    return coinGeckoApiClient.fetchMarketData(List.of(id))
+  public Mono<CryptoCurrency> fetchByFinancialInstrument(FinancialInstrumentEntity financialInstrument) {
+    return coinGeckoApiClient.fetchMarketData(List.of(financialInstrument.getName()))
         .flatMap(dtoList -> dtoList.isEmpty()
             ? Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "CryptoCurrency not found"))
             : Mono.just(dtoList.get(0)))

@@ -69,7 +69,7 @@ public class MarketHubServiceImpl implements MarketHubService{
 
     var adapter = getMarketAdapter(marketType);
     var financialInstrument = financialInstrumentRepository.findBySymbolAndMarketType(symbol, marketType).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Financial instrument not found"));
-    var result = adapter.fetchById(symbol).block();
+    var result = adapter.fetchByFinancialInstrument(financialInstrument).block();
 
     SubscriptionEntity subscriptionEntity = SubscriptionEntity.builder()
         .email(email)

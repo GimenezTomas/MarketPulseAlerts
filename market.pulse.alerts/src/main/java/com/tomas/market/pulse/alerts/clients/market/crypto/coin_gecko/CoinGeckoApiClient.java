@@ -23,7 +23,7 @@ public class CoinGeckoApiClient {
         .uri(uriBuilder -> uriBuilder
             .path("/coins/markets")
             .queryParam("vs_currency", "usd")
-            .queryParam("ids", String.join(",", ids))
+            .queryParam("ids", String.join(",", ids.stream().map(String::toLowerCase).toList()))
             .build())
         .retrieve()
         .bodyToMono(new ParameterizedTypeReference<List<CoinGeckoCryptoDTO>>(){});

@@ -16,11 +16,11 @@ import org.mockito.quality.Strictness;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.tomas.market.pulse.alerts.clients.market.crypto.coin_gecko.CoinGeckoCryptoDTO;
 import com.tomas.market.pulse.alerts.clients.market.stock.profit.ProfitApiClient;
 import com.tomas.market.pulse.alerts.clients.market.stock.profit.StockProfitDTO;
-import com.tomas.market.pulse.alerts.model.CryptoCurrency;
+import com.tomas.market.pulse.alerts.model.MarketType;
 import com.tomas.market.pulse.alerts.model.Stock;
+import com.tomas.market.pulse.alerts.model.entities.FinancialInstrumentEntity;
 
 import reactor.core.publisher.Mono;
 
@@ -45,22 +45,31 @@ public class StockMarketAdapterTest {
 
   @Test
   void shouldFetchByIdAndMapToStock(){
-    String symbol = "symbol1";
-    Stock expectedStock = new Stock(symbol, "name1", 0);
-    when(profitApiClient.fetchStockById(symbol)).thenReturn(Mono.just(new StockProfitDTO(symbol, "name1", 0d)));
+    var financialInstrumentEntity = FinancialInstrumentEntity.builder()
+        .symbol("symbol1")
+        .name("name1")
+        .marketType(MarketType.CRYPTO)
+        .build();
 
-    var actualMono = stockMarketAdapter.fetchById(symbol);
+    Stock expectedStock = new Stock(financialInstrumentEntity.getSymbol(), financialInstrumentEntity.getName(), 0);
+    when(profitApiClient.fetchStockById(financialInstrumentEntity.getSymbol())).thenReturn(Mono.just(new StockProfitDTO(financialInstrumentEntity.getSymbol(), "name1", 0d)));
+
+    var actualMono = stockMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity);
 
     assertEquals(expectedStock, actualMono.block());
   }
 
   @Test
   void shouldThrowExceptionWhileFetchingByIdIfItDoesNotExist(){
-    String symbol = "symbol1";
+    var financialInstrumentEntity = FinancialInstrumentEntity.builder()
+        .symbol("symbol1")
+        .name("name1")
+        .marketType(MarketType.CRYPTO)
+        .build();
 
-    when(profitApiClient.fetchStockById(symbol)).thenReturn(Mono.just(new StockProfitDTO(null, null, 0)));
+    when(profitApiClient.fetchStockById(financialInstrumentEntity.getSymbol())).thenReturn(Mono.just(new StockProfitDTO(null, null, 0)));
 
-    var e = assertThrows(ResponseStatusException.class, () -> stockMarketAdapter.fetchById(symbol).block());
+    var e = assertThrows(ResponseStatusException.class, () -> stockMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity).block());
     assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
   }
 

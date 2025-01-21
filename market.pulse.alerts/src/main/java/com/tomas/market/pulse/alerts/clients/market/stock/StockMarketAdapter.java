@@ -8,9 +8,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.tomas.market.pulse.alerts.clients.market.MarketDataAdapter;
 import com.tomas.market.pulse.alerts.clients.market.stock.profit.ProfitApiClient;
-import com.tomas.market.pulse.alerts.clients.market.stock.profit.StockProfitDTO;
-import com.tomas.market.pulse.alerts.model.CryptoCurrency;
 import com.tomas.market.pulse.alerts.model.Stock;
+import com.tomas.market.pulse.alerts.model.entities.FinancialInstrumentEntity;
 
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
@@ -30,19 +29,21 @@ public class StockMarketAdapter implements MarketDataAdapter<Stock> {
   }
 
   @Override
-  public Mono<Stock> fetchById(String id) {
-    return profitApiClient.fetchStockById(id)
-        .flatMap(stock -> stock.symbol() == null
-            ? Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found"))
-            : Mono.just(new Stock(stock.symbol(), stock.name(), stock.price())));
+  public Mono<Stock> fetchByFinancialInstrument(FinancialInstrumentEntity financialInstrument) {
+    return fetchBySymbol(financialInstrument.getSymbol());
   }
 
   @Override
   public Mono<List<Stock>> fetchByIds(List<String> ids) {
     return Flux.fromIterable(ids)
-        .flatMap(id -> fetchById(id).onErrorResume(e -> Mono.empty()))
+        .flatMap(id -> fetchBySymbol(id).onErrorResume(e -> Mono.empty()))
         .collectList();
   }
 
-  //TODO hay que encontrarle la vuelta para que todas las llamadas de cada uno de sus quotes (tesla x ej) los haga de forma asincrona
+  private Mono<Stock> fetchBySymbol(String symbol){
+    return profitApiClient.fetchStockById(symbol)
+        .flatMap(stock -> stock.symbol() == null
+            ? Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found"))
+            : Mono.just(new Stock(stock.symbol(), stock.name(), stock.price())));
+  }
 }
