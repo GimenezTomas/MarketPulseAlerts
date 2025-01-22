@@ -9,4 +9,5 @@ public interface MarketHubService {
   void unSubscribeUserFromFinancialInstrumentNotifications(String email, String financialInstrumentId);
   FinancialInstrumentResponse getSubscribedFinancialInstrumentsByUser(String email);
   void syncNewFinancialInstruments();
+  void notifySubscribers();
 }

@@ -8,7 +8,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
 
@@ -29,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -48,6 +51,8 @@ class MarketHubServiceImplTest {
   private SubscriptionEntityRepository subscriptionRepository;
   @Mock
   private FinancialInstrumentEntityRepository financialInstrumentRepository;
+  @Mock
+  private NotificationService notificationService;
   private CryptoCurrency cryptoCurrency1;
   private CryptoCurrency cryptoCurrency2;
   private Stock stock1;
@@ -58,7 +63,7 @@ class MarketHubServiceImplTest {
   void setUp() {
     MockitoAnnotations.openMocks(this);
 
-    marketHubService = new MarketHubServiceImpl(cryptoMarketAdapter, stockMarketAdapter, subscriptionRepository, financialInstrumentRepository);
+    marketHubService = new MarketHubServiceImpl(cryptoMarketAdapter, stockMarketAdapter, subscriptionRepository, financialInstrumentRepository, notificationService);
 
     when(cryptoMarketAdapter.fetchMarketData()).thenReturn(Mono.just(new ArrayList<>()));
     when(stockMarketAdapter.fetchMarketData()).thenReturn(Mono.just(new ArrayList<>()));
@@ -536,8 +541,217 @@ class MarketHubServiceImplTest {
   }
 
   @Test
-  void shouldReturnOneElementPerMarketWhenUserHasOnlyOneSubscriptionOfEachMarket(){
+  void shouldNotNotifyAnyUserWhenThereAreNoSubscribers(){
+    when(financialInstrumentRepository.findAllWithRelatedSubscriptions()).thenReturn(List.of());
 
+    marketHubService.notifySubscribers();
+
+    verify(financialInstrumentRepository).findAllWithRelatedSubscriptions();
+    verifyNoMoreInteractions(subscriptionRepository, financialInstrumentRepository, cryptoMarketAdapter, stockMarketAdapter);
+  }
+
+  @Test
+  void shouldNotifySubscribersWhenExistsOneCryptoCurrencyWithAtLeastOneSubscription(){
+    var financialInstrument = FinancialInstrumentEntity.builder()
+        .marketType(MarketType.CRYPTO)
+        .name(cryptoCurrency1.getName())
+        .symbol(cryptoCurrency1.getSymbol())
+        .build();
+
+    var subscription = SubscriptionEntity.builder()
+        .financialInstrument(financialInstrument)
+        .currentPrice(cryptoCurrency1.getPrice() * 0.5)
+        .lowerThreshold(10)
+        .upperThreshold(10)
+        .email("email@gmail.com")
+        .originalPrice(cryptoCurrency1.getPrice() * 0.5)
+        .build();
+
+    when(financialInstrumentRepository.findAllWithRelatedSubscriptions()).thenReturn(List.of(financialInstrument));
+    when(cryptoMarketAdapter.fetchByIds(List.of(cryptoCurrency1.getName()))).thenReturn(Mono.just(List.of(cryptoCurrency1)));
+    when(stockMarketAdapter.fetchByIds(new ArrayList<>())).thenReturn(Mono.just(new ArrayList<>()));
+    when(subscriptionRepository.findAllByFinancialInstrument(financialInstrument)).thenReturn(List.of(subscription));
+    doNothing().when(notificationService).notifyUsersByEmail(Map.of(subscription.getEmail(), anyString()));
+
+    marketHubService.notifySubscribers();
+
+    verify(financialInstrumentRepository).findAllWithRelatedSubscriptions();
+    verify(cryptoMarketAdapter, times(1)).fetchByIds(List.of(cryptoCurrency1.getName()));
+    verify(stockMarketAdapter, times(1)).fetchByIds(new ArrayList<>());
+    verify(subscriptionRepository, times(1)).findAllByFinancialInstrument(financialInstrument);
+    verify(notificationService).notifyUsersByEmail(argThat(map ->
+        map.containsKey(subscription.getEmail()) &&
+            map.get(subscription.getEmail()).startsWith("Crypto symbol")
+    ));
+    verifyNoMoreInteractions(cryptoMarketAdapter, stockMarketAdapter);
+  }
+
+  @Test
+  void shouldNotifySubscribersWhenExistsOneStockWithAtLeastOneSubscription(){
+    var financialInstrument = FinancialInstrumentEntity.builder()
+        .marketType(MarketType.STOCK)
+        .name(stock1.getName())
+        .symbol(stock1.getSymbol())
+        .build();
+
+    var subscription = SubscriptionEntity.builder()
+        .financialInstrument(financialInstrument)
+        .currentPrice(stock1.getPrice() * 0.5)
+        .lowerThreshold(10)
+        .upperThreshold(10)
+        .email("email@gmail.com")
+        .originalPrice(stock1.getPrice() * 0.5)
+        .build();
+
+    when(financialInstrumentRepository.findAllWithRelatedSubscriptions()).thenReturn(List.of(financialInstrument));
+    when(cryptoMarketAdapter.fetchByIds(new ArrayList<>())).thenReturn(Mono.just(new ArrayList<>()));
+    when(stockMarketAdapter.fetchByIds(List.of(financialInstrument.getSymbol()))).thenReturn(Mono.just(List.of(stock1)));
+    when(subscriptionRepository.findAllByFinancialInstrument(financialInstrument)).thenReturn(List.of(subscription));
+    doNothing().when(notificationService).notifyUsersByEmail(Map.of(subscription.getEmail(), anyString()));
+
+    marketHubService.notifySubscribers();
+
+    verify(financialInstrumentRepository).findAllWithRelatedSubscriptions();
+    verify(stockMarketAdapter, times(1)).fetchByIds(List.of(financialInstrument.getSymbol()));
+    verify(cryptoMarketAdapter, times(1)).fetchByIds(new ArrayList<>());
+    verify(subscriptionRepository, times(1)).findAllByFinancialInstrument(financialInstrument);
+    verify(notificationService).notifyUsersByEmail(argThat(map ->
+        map.containsKey(subscription.getEmail()) &&
+            map.get(subscription.getEmail()).startsWith("Stock symbol")
+    ));
+    verifyNoMoreInteractions(cryptoMarketAdapter, stockMarketAdapter);
+  }
+
+  @Test
+  void shouldNotNotifySubscribersWhenExistsOneCryptoCurrencyWithAtLeastOneSubscriptionButPriceBelowThreshold(){
+    var financialInstrument = FinancialInstrumentEntity.builder()
+        .marketType(MarketType.CRYPTO)
+        .name(cryptoCurrency1.getName())
+        .symbol(cryptoCurrency1.getSymbol())
+        .build();
+
+    var subscription = SubscriptionEntity.builder()
+        .financialInstrument(financialInstrument)
+        .currentPrice(cryptoCurrency1.getPrice())
+        .lowerThreshold(10)
+        .upperThreshold(10)
+        .email("email@gmail.com")
+        .originalPrice(cryptoCurrency1.getPrice())
+        .build();
+
+    when(financialInstrumentRepository.findAllWithRelatedSubscriptions()).thenReturn(List.of(financialInstrument));
+    when(cryptoMarketAdapter.fetchByIds(List.of(cryptoCurrency1.getName()))).thenReturn(Mono.just(List.of(cryptoCurrency1)));
+    when(stockMarketAdapter.fetchByIds(new ArrayList<>())).thenReturn(Mono.just(new ArrayList<>()));
+    when(subscriptionRepository.findAllByFinancialInstrument(financialInstrument)).thenReturn(List.of(subscription));
+    doNothing().when(notificationService).notifyUsersByEmail(Map.of(subscription.getEmail(), anyString()));
+
+    marketHubService.notifySubscribers();
+
+    verify(financialInstrumentRepository).findAllWithRelatedSubscriptions();
+    verify(cryptoMarketAdapter, times(1)).fetchByIds(List.of(cryptoCurrency1.getName()));
+    verify(stockMarketAdapter, times(1)).fetchByIds(new ArrayList<>());
+    verify(subscriptionRepository, times(1)).findAllByFinancialInstrument(financialInstrument);
+    verify(notificationService).notifyUsersByEmail(new HashMap<>());
+    verifyNoMoreInteractions(cryptoMarketAdapter, stockMarketAdapter);
+  }
+
+  @Test
+  void shouldNotNotifySubscribersWhenCryptoPriceIsAboveLowerThreshold() {
+    var financialInstrument = createFinancialInstrument();
+    var subscription = createSubscription(financialInstrument, 10, 10);
+
+    cryptoCurrency1.setPrice(cryptoCurrency1.getPrice() * 0.91);
+
+    mockDependencies(financialInstrument, subscription, cryptoCurrency1);
+
+    marketHubService.notifySubscribers();
+
+    verifyInteractions(financialInstrument);
+    verify(notificationService).notifyUsersByEmail(new HashMap<>());
+  }
+
+  @Test
+  void shouldNotNotifySubscribersWhenCryptoPriceIsBelowUpperThreshold() {
+    var financialInstrument = createFinancialInstrument();
+    var subscription = createSubscription(financialInstrument, 10, 10);
+
+    cryptoCurrency1.setPrice(cryptoCurrency1.getPrice() * 1.09);
+
+    mockDependencies(financialInstrument, subscription, cryptoCurrency1);
+
+    marketHubService.notifySubscribers();
+
+    verifyInteractions(financialInstrument);
+    verify(notificationService).notifyUsersByEmail(new HashMap<>());
+  }
+
+  @Test
+  void shouldNotifySubscribersWhenCryptoPriceIsBelowLowerThreshold() {
+    var financialInstrument = createFinancialInstrument();
+    var subscription = createSubscription(financialInstrument, 10, 10); // lowerThreshold = 10%
+
+    cryptoCurrency1.setPrice(cryptoCurrency1.getPrice() * 0.89);
+
+    mockDependencies(financialInstrument, subscription, cryptoCurrency1);
+
+    marketHubService.notifySubscribers();
+
+    verifyInteractions(financialInstrument);
+    verify(notificationService).notifyUsersByEmail(
+        Map.of(subscription.getEmail(), "Crypto symbol " + cryptoCurrency1.getSymbol() + " is now worth $" + cryptoCurrency1.getPrice())
+    );
+  }
+
+  @Test
+  void shouldNotifySubscribersWhenCryptoPriceIsAboveUpperThreshold() {
+    var financialInstrument = createFinancialInstrument();
+    var subscription = createSubscription(financialInstrument, 10, 10); // upperThreshold = 10%
+
+    cryptoCurrency1.setPrice(cryptoCurrency1.getPrice() * 1.11);
+
+    mockDependencies(financialInstrument, subscription, cryptoCurrency1);
+
+    marketHubService.notifySubscribers();
+
+    verifyInteractions(financialInstrument);
+    verify(notificationService).notifyUsersByEmail(
+        Map.of(subscription.getEmail(), "Crypto symbol " + cryptoCurrency1.getSymbol() + " is now worth $" + cryptoCurrency1.getPrice())
+    );
+  }
+
+  private FinancialInstrumentEntity createFinancialInstrument() {
+    return FinancialInstrumentEntity.builder()
+        .marketType(MarketType.CRYPTO)
+        .name(cryptoCurrency1.getName())
+        .symbol(cryptoCurrency1.getSymbol())
+        .build();
+  }
+
+  private SubscriptionEntity createSubscription(FinancialInstrumentEntity financialInstrument, int lowerThreshold, int upperThreshold) {
+    return SubscriptionEntity.builder()
+        .financialInstrument(financialInstrument)
+        .currentPrice(cryptoCurrency1.getPrice())
+        .lowerThreshold(lowerThreshold)
+        .upperThreshold(upperThreshold)
+        .email("email@gmail.com")
+        .originalPrice(cryptoCurrency1.getPrice())
+        .build();
+  }
+
+  private void mockDependencies(FinancialInstrumentEntity financialInstrument, SubscriptionEntity subscription, CryptoCurrency updatedCryptoCurrency) {
+    when(financialInstrumentRepository.findAllWithRelatedSubscriptions()).thenReturn(List.of(financialInstrument));
+    when(cryptoMarketAdapter.fetchByIds(List.of(cryptoCurrency1.getName()))).thenReturn(Mono.just(List.of(updatedCryptoCurrency)));
+    when(stockMarketAdapter.fetchByIds(new ArrayList<>())).thenReturn(Mono.just(new ArrayList<>()));
+    when(subscriptionRepository.findAllByFinancialInstrument(financialInstrument)).thenReturn(List.of(subscription));
+    doNothing().when(notificationService).notifyUsersByEmail(Map.of(subscription.getEmail(), anyString()));
+  }
+
+  private void verifyInteractions(FinancialInstrumentEntity financialInstrument) {
+    verify(financialInstrumentRepository).findAllWithRelatedSubscriptions();
+    verify(cryptoMarketAdapter, times(1)).fetchByIds(List.of(cryptoCurrency1.getName()));
+    verify(stockMarketAdapter, times(1)).fetchByIds(new ArrayList<>());
+    verify(subscriptionRepository, times(1)).findAllByFinancialInstrument(financialInstrument);
+    verifyNoMoreInteractions(cryptoMarketAdapter, stockMarketAdapter);
   }
 
   private void assertEqualsListFinancialInstruments(List<? extends FinancialInstrument> expected, List<? extends FinancialInstrument> current){

@@ -1,7 +1,9 @@
 package com.tomas.market.pulse.alerts.api.services;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -21,18 +23,21 @@ import com.tomas.market.pulse.alerts.model.entities.SubscriptionEntity;
 import com.tomas.market.pulse.alerts.repositories.FinancialInstrumentEntityRepository;
 import com.tomas.market.pulse.alerts.repositories.SubscriptionEntityRepository;
 
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @Service
+@Slf4j
 public class MarketHubServiceImpl implements MarketHubService{
   private final MarketDataAdapter<CryptoCurrency> cryptoMarketAdapter;
   private final MarketDataAdapter<Stock> stockMarketAdapter;
   private final SubscriptionEntityRepository subscriptionRepository;
   private final FinancialInstrumentEntityRepository financialInstrumentRepository;
+  private final NotificationService notificationService;
 
   public MarketHubServiceImpl(MarketDataAdapter<CryptoCurrency> cryptoMarketAdapter,
       MarketDataAdapter<Stock> stockMarketAdapter, SubscriptionEntityRepository subscriptionRepository,
-      FinancialInstrumentEntityRepository financialInstrumentRepository) {
+      FinancialInstrumentEntityRepository financialInstrumentRepository, NotificationService notificationService) {
     this.cryptoMarketAdapter = cryptoMarketAdapter;
     this.stockMarketAdapter = stockMarketAdapter;
 
@@ -40,6 +45,7 @@ public class MarketHubServiceImpl implements MarketHubService{
 
     this.subscriptionRepository = subscriptionRepository;
     this.financialInstrumentRepository = financialInstrumentRepository;
+    this.notificationService = notificationService;
   }
 
   @Override
@@ -152,6 +158,55 @@ public class MarketHubServiceImpl implements MarketHubService{
 
           return financialInstrumentRepository.saveAll(missingFinancialInstruments);
         }).block();
+  }
+
+  @Override
+  public void notifySubscribers() {
+    var financialInstruments = financialInstrumentRepository.findAllWithRelatedSubscriptions();
+
+    if (financialInstruments.isEmpty()) {
+      log.info("no user was notified due to there are not subscriptions");
+      return;
+    }
+
+    List<FinancialInstrumentEntity> cryptoList = financialInstruments.stream()
+        .filter(f -> f.getMarketType() == MarketType.CRYPTO)
+        .toList();
+
+    List<FinancialInstrumentEntity> stocksList = financialInstruments.stream()
+        .filter(f -> f.getMarketType() == MarketType.STOCK)
+        .toList();
+    Map<String, Double> cryptoSymbolsWithPrices = new HashMap<>();
+    Map<String, Double> stockSymbolsWithPrices = new HashMap<>();
+
+    Mono<List<CryptoCurrency>> cryptoCurrenciesMono = cryptoMarketAdapter.fetchByIds(cryptoList.stream().map(FinancialInstrumentEntity::getName).toList());
+    Mono<List<Stock>> stocksMono = stockMarketAdapter.fetchByIds(stocksList.stream().map(FinancialInstrumentEntity::getSymbol).toList());
+    Mono.zip(cryptoCurrenciesMono, stocksMono)
+        .doOnNext(tuple -> {
+          tuple.getT1().forEach(c -> cryptoSymbolsWithPrices.put(c.getSymbol(), c.getPrice()));
+          tuple.getT2().forEach(s -> stockSymbolsWithPrices.put(s.getSymbol(), s.getPrice()));
+        })
+        .block();
+
+    //TODO esto deberia ser async
+    cryptoList.forEach(c -> {
+      var subscriptions = subscriptionRepository.findAllByFinancialInstrument(c);
+      //TODO cambiarlo para que si es un low mande un msj en particular y si es un upper tmb y  fijarse si lo del diccionario se puede hacer directo con el .map
+      Map<String, String> emailsAndMessages = new HashMap<>();
+      subscriptions.stream()
+          .filter(s -> (s.getCurrentPrice() * s.getUpperThreshold() / 100) + s.getCurrentPrice() <= cryptoSymbolsWithPrices.get(c.getSymbol()) || s.getCurrentPrice() - (s.getCurrentPrice() * s.getLowerThreshold() / 100) >= cryptoSymbolsWithPrices.get(c.getSymbol()))
+          .forEach(s -> emailsAndMessages.put(s.getEmail(), String.format("Crypto symbol %s is now worth $%s", c.getSymbol(), cryptoSymbolsWithPrices.get(c.getSymbol()))));
+      notificationService.notifyUsersByEmail(emailsAndMessages);
+    });
+    stocksList.forEach(st -> {
+      var subscriptions = subscriptionRepository.findAllByFinancialInstrument(st);
+
+      Map<String, String> emailsAndMessages = new HashMap<>();
+      subscriptions.stream()
+          .filter(s -> (s.getCurrentPrice() * s.getUpperThreshold() / 100) + s.getCurrentPrice() <= stockSymbolsWithPrices.get(st.getSymbol()) || s.getCurrentPrice() - (s.getCurrentPrice() * s.getLowerThreshold() / 100) >= stockSymbolsWithPrices.get(st.getSymbol()))
+          .forEach(s -> emailsAndMessages.put(s.getEmail(), String.format("Stock symbol %s is now worth $%s", st.getSymbol(), stockSymbolsWithPrices.get(st.getSymbol()))));
+      notificationService.notifyUsersByEmail(emailsAndMessages);
+    });
   }
 
   private MarketDataAdapter<? extends FinancialInstrument> getMarketAdapter(MarketType marketType) {

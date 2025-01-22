@@ -67,7 +67,7 @@ class CryptoMarketAdapterTest {
         .marketType(MarketType.CRYPTO)
         .build();
 
-    when(coinGeckoApiClient.fetchMarketData(List.of(financialInstrumentEntity.getSymbol())))
+    when(coinGeckoApiClient.fetchMarketData(List.of(financialInstrumentEntity.getName())))
         .thenReturn(Mono.just(List.of()));
 
     var e = assertThrows(ResponseStatusException.class, () -> cryptoMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity).block());

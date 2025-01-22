@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import com.tomas.market.pulse.alerts.model.entities.FinancialInstrumentEntity;
 import com.tomas.market.pulse.alerts.model.entities.SubscriptionEntity;
 
 public interface SubscriptionEntityRepository extends JpaRepository<SubscriptionEntity, Long> {
@@ -12,4 +13,6 @@ public interface SubscriptionEntityRepository extends JpaRepository<Subscription
   //TODO AGREGAR MARKET TYPE
   void deleteByFinancialInstrument_SymbolAndEmail(String id, String email);
   List<SubscriptionEntity> findAllByEmail(String email);
+  //TODO AGREGAR PAGINADO
+  List<SubscriptionEntity> findAllByFinancialInstrument(FinancialInstrumentEntity financialInstrumentEntity);
 }

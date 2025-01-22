@@ -52,6 +52,7 @@ public class SubscriptionEntity {
     @Column(name = "original_price", nullable = false)
     private double originalPrice;
 
+    //TODO renombrar, el nombre esta mal ya que deberia hacer referencia a la ultima actualizacion de precio que se produce en la ultima notificacion
     @NotNull
     @Column(name = "current_price", nullable = false)
     private double currentPrice;
