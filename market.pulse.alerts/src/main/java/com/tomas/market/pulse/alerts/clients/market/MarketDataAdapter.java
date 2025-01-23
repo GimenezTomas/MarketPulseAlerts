@@ -12,5 +12,6 @@ public interface MarketDataAdapter<E extends FinancialInstrument> {
 
   Mono<E> fetchByFinancialInstrument(FinancialInstrumentEntity financialInstrument);
 
+  //TODO: rever tema de los IDS, debido a que depende del adapter que usar. A lo mejor lo propio seria pasarle un FinancialInstrument y ya (o un codigo xq resuelvo el probelma en la subscirpcion)
   Mono<List<E>> fetchByIds(List<String> ids);
 }
