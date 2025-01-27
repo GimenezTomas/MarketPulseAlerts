@@ -120,7 +120,7 @@ docker run -d \
     .build();
 ```
 # RESPONSE:
-```
+```json
 [
     {
         "id": "bitcoin",
@@ -199,7 +199,7 @@ docker run -d \
 url: https://api.profit.com/data-api/reference/stocks?token={your_account_key}&skip=0&limit=10&country=United%20States&currency=USD&available_data=fundamental&type=Common%20Stock
 ```
 #### Sample Response
-```
+```json
 {
     "data": [
         {
