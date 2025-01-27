@@ -18,7 +18,7 @@ You can access the API documentation via Swagger at the following URL:
 
 ## Database Setup
 
-The application uses PostgreSQL as its database. Follow these steps to set up and create the database:
+The application uses PostgreSQL as its database. Follow these steps to set up and create the database (skip this if you prefer to use docker):
 
 1. **Install PostgreSQL**: Ensure that PostgreSQL is installed on your machine.
 

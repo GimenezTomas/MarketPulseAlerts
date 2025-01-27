@@ -48,6 +48,8 @@ gradlew.bat
 *.iml
 idea.md
 notes
+generics.rtf
+idea.txt
 
 # Ignore everything else
 *
