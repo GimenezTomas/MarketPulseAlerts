@@ -96,7 +96,7 @@ class MarketHubServiceImplTest {
         .marketType(MarketType.CRYPTO)
         .build());
     var expectedCryptoCurrency = cryptoCurrency1;
-    expectedCryptoCurrency.setPrice(0);
+    expectedCryptoCurrency.setPrice(0d);
 
     when(financialInstrumentRepository.findAll()).thenReturn(cryptoCurrencies);
     var financialInstrumentMap = marketHubService.getAll().instruments();
@@ -119,7 +119,7 @@ class MarketHubServiceImplTest {
     );
 
     var expectedCryptoCurrencies = List.of(cryptoCurrency1, cryptoCurrency2);
-    expectedCryptoCurrencies.forEach(c -> c.setPrice(0));
+    expectedCryptoCurrencies.forEach(c -> c.setPrice(0d));
 
     when(financialInstrumentRepository.findAll()).thenReturn(cryptoCurrencies);
     var financialInstrumentsMap = marketHubService.getAll().instruments();
@@ -142,7 +142,7 @@ class MarketHubServiceImplTest {
     );
 
     var expectedStocks = List.of(stock1, stock2);
-    expectedStocks.forEach(s -> s.setPrice(0));
+    expectedStocks.forEach(s -> s.setPrice(0d));
 
     when(financialInstrumentRepository.findAll()).thenReturn(stocks);
     var financialInstrumentsMap = marketHubService.getAll().instruments();
@@ -175,10 +175,10 @@ class MarketHubServiceImplTest {
     );
 
     var expectedCryptoCurrencies = List.of(cryptoCurrency1, cryptoCurrency2);
-    expectedCryptoCurrencies.forEach(c -> c.setPrice(0));
+    expectedCryptoCurrencies.forEach(c -> c.setPrice(0d));
 
     var expectedStocks = List.of(stock1, stock2);
-    expectedStocks.forEach(s -> s.setPrice(0));
+    expectedStocks.forEach(s -> s.setPrice(0d));
 
     when(financialInstrumentRepository.findAll()).thenReturn(instruments);
     var financialInstrumentResponse = marketHubService.getAll().instruments();

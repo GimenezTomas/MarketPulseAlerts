@@ -36,7 +36,7 @@ class StockMarketAdapterTest {
   void shouldFetchMarketDataAndMapToStockList() {
     List<Stock> expectedStocks = List.of(new Stock("symbol1", "name1", 0), new Stock("symbol2", "name2", 1));
 
-    when(profitApiClient.fetchStocksData()).thenReturn(Mono.just(List.of(new StockProfitDTO("symbol1", "name1", 0d), new StockProfitDTO("symbol2", "name2", 1d))));
+    when(profitApiClient.fetchStocksData()).thenReturn(Mono.just(List.of(new StockProfitDTO("symbol1", "name1", 0d, "", ""), new StockProfitDTO("symbol2", "name2", 1d, "", ""))));
 
     Mono<List<Stock>> actualMono = stockMarketAdapter.fetchMarketData();
 
@@ -48,11 +48,11 @@ class StockMarketAdapterTest {
     var financialInstrumentEntity = FinancialInstrumentEntity.builder()
         .symbol("symbol1")
         .name("name1")
-        .marketType(MarketType.CRYPTO)
+        .marketType(MarketType.STOCK)
         .build();
 
-    Stock expectedStock = new Stock(financialInstrumentEntity.getSymbol(), financialInstrumentEntity.getName(), 0);
-    when(profitApiClient.fetchStockById(financialInstrumentEntity.getSymbol())).thenReturn(Mono.just(new StockProfitDTO(financialInstrumentEntity.getSymbol(), "name1", 0d)));
+    Stock expectedStock = new Stock(financialInstrumentEntity.getSymbol(), financialInstrumentEntity.getName(), 0, "", "");
+    when(profitApiClient.fetchStockById(financialInstrumentEntity.getSymbol())).thenReturn(Mono.just(new StockProfitDTO(financialInstrumentEntity.getSymbol(), "name1", 0d, "", "")));
 
     var actualMono = stockMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity);
 
@@ -67,7 +67,7 @@ class StockMarketAdapterTest {
         .marketType(MarketType.CRYPTO)
         .build();
 
-    when(profitApiClient.fetchStockById(financialInstrumentEntity.getSymbol())).thenReturn(Mono.just(new StockProfitDTO(null, null, 0)));
+    when(profitApiClient.fetchStockById(financialInstrumentEntity.getSymbol())).thenReturn(Mono.just(new StockProfitDTO(null, null, 0, null, null)));
 
     var monoResult = stockMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity);
     var e = assertThrows(ResponseStatusException.class, monoResult::block);
@@ -76,8 +76,8 @@ class StockMarketAdapterTest {
 
   @Test
   void shouldFetchByIdsAndMapToStocksList(){
-    var stock1 = new StockProfitDTO("s1", "n1", 900);
-    var stock2 = new StockProfitDTO("s2", "n2", 700);
+    var stock1 = new StockProfitDTO("s1", "n1", 900, "", "");
+    var stock2 = new StockProfitDTO("s2", "n2", 700, "", "");
 
     when(profitApiClient.fetchStockById(stock1.name())).thenReturn(Mono.just(stock1));
     when(profitApiClient.fetchStockById(stock2.name())).thenReturn(Mono.just(stock2));
@@ -98,8 +98,8 @@ class StockMarketAdapterTest {
 
   @Test
   void shouldFetchByIdsAndMapToStockOneElementListWhenOnlyOneElementWasFounded(){
-    var stock1 = new StockProfitDTO("s1", "n1", 900);
-    var stock2 = new StockProfitDTO("s2", "n2", 700);
+    var stock1 = new StockProfitDTO("s1", "n1", 900, "", "");
+    var stock2 = new StockProfitDTO("s2", "n2", 700, "", "");
 
     when(profitApiClient.fetchStockById(stock1.name())).thenReturn(Mono.just(stock1));
     when(profitApiClient.fetchStockById(stock2.name())).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)));
@@ -125,8 +125,8 @@ class StockMarketAdapterTest {
 
   @Test
   void shouldReturnEmptyListWhenNoStocksAreFound() {
-    var stock1 = new StockProfitDTO("s1", "n1", 900);
-    var stock2 = new StockProfitDTO("s2", "n2", 700);
+    var stock1 = new StockProfitDTO("s1", "n1", 900, "", "");
+    var stock2 = new StockProfitDTO("s2", "n2", 700, "", "");
 
     when(profitApiClient.fetchStockById(stock1.name())).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)));
     when(profitApiClient.fetchStockById(stock2.name())).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)));

@@ -33,10 +33,10 @@ class CryptoMarketAdapterTest {
 
   @Test
   void shouldFetchMarketDataAndMapToCryptoCurrenciesList() {
-    List<CryptoCurrency> expectedCryptos = List.of(new CryptoCurrency("symbol1", "name1", 0), new CryptoCurrency("symbol2", "name2", 1));
+    List<CryptoCurrency> expectedCryptos = List.of(new CryptoCurrency("symbol1", "name1", 0d, 0d, 0d), new CryptoCurrency("symbol2", "name2", 1d, 1d, 0d));
 
     when(coinGeckoApiClient.fetchMarketData(anyList())).thenReturn(
-        Mono.just(List.of(new CoinGeckoCryptoDTO("id1", "symbol1", "name1", 0), new CoinGeckoCryptoDTO("id2", "symbol2", "name2", 1))));
+        Mono.just(List.of(new CoinGeckoCryptoDTO("id1", "symbol1", "name1", 0, 0, 0), new CoinGeckoCryptoDTO("id2", "symbol2", "name2", 1, 1, 0))));
 
     Mono<List<CryptoCurrency>> actualMono = cryptoMarketAdapter.fetchMarketData();
 
@@ -51,10 +51,10 @@ class CryptoMarketAdapterTest {
         .name("name1")
         .marketType(MarketType.CRYPTO)
         .build();
-    CryptoCurrency expectedCrypto = new CryptoCurrency("symbol1", "name1", 0);
+    CryptoCurrency expectedCrypto = new CryptoCurrency("symbol1", "name1", 0d, 0d, 0d);
 
     when(coinGeckoApiClient.fetchMarketData(anyList())).thenReturn(
-        Mono.just(List.of(new CoinGeckoCryptoDTO("id1", "symbol1", "name1", 0))));
+        Mono.just(List.of(new CoinGeckoCryptoDTO("id1", "symbol1", "name1", 0d, 0d, 0d))));
 
     Mono<CryptoCurrency> actualMono = cryptoMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity);
 
@@ -79,8 +79,8 @@ class CryptoMarketAdapterTest {
 
   @Test
   void shouldFetchByIdsAndMapToCryptoCurrenciesList(){
-    CoinGeckoCryptoDTO coin1 = new CoinGeckoCryptoDTO("id1", "symbol1", "name1", 900);
-    CoinGeckoCryptoDTO coin2 = new CoinGeckoCryptoDTO("id2", "symbol2", "name2", 700);
+    CoinGeckoCryptoDTO coin1 = new CoinGeckoCryptoDTO("id1", "symbol1", "name1", 900, 0d, 0d);
+    CoinGeckoCryptoDTO coin2 = new CoinGeckoCryptoDTO("id2", "symbol2", "name2", 700, 0d, 0d);
 
     when(coinGeckoApiClient.fetchMarketData(List.of(coin1.symbol(), coin2.symbol()))).thenReturn(Mono.just(List.of(coin1, coin2)));
     Mono<List<CryptoCurrency>> response = cryptoMarketAdapter.fetchByIds(List.of(coin1.symbol(), coin2.symbol()));

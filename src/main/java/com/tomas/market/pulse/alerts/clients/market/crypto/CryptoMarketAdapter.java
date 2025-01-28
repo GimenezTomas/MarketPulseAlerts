@@ -31,14 +31,14 @@ public class CryptoMarketAdapter implements MarketDataAdapter<CryptoCurrency> {
         .flatMap(dtoList -> dtoList.isEmpty()
             ? Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "CryptoCurrency not found"))
             : Mono.just(dtoList.get(0)))
-        .map(dto -> new CryptoCurrency(dto.symbol(), dto.name(), dto.currentPrice()));
+        .map(dto -> new CryptoCurrency(dto.symbol(), dto.name(), dto.currentPrice(), dto.high24h(), dto.low24h()));
   }
 
   @Override
   public Mono<List<CryptoCurrency>> fetchByIds(List<String> ids) {
     return coinGeckoApiClient.fetchMarketData(ids)
         .map(dtoList -> dtoList.stream()
-            .map(dto -> new CryptoCurrency(dto.symbol(), dto.name(), dto.currentPrice()))
+            .map(dto -> new CryptoCurrency(dto.symbol(), dto.name(), dto.currentPrice(), dto.high24h(), dto.low24h()))
             .toList());
   }
 }

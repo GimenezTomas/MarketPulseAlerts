@@ -12,5 +12,5 @@ public abstract class FinancialInstrument {
   protected String name;
 
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  protected double price;
+  protected Double price;
 }

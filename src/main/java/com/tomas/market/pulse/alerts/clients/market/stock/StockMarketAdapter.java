@@ -44,6 +44,6 @@ public class StockMarketAdapter implements MarketDataAdapter<Stock> {
     return profitApiClient.fetchStockById(symbol)
         .flatMap(stock -> stock.symbol() == null
             ? Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found"))
-            : Mono.just(new Stock(stock.symbol(), stock.name(), stock.price())));
+            : Mono.just(new Stock(stock.symbol(), stock.name(), stock.price(), stock.ticker(), stock.broker())));
   }
 }
