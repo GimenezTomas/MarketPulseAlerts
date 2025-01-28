@@ -82,10 +82,10 @@ class MarketHubServiceImplTest {
 
   @Test
   void shouldReturnEmptyListOfFinancialInstrumentsWhenNoInstrumentsAreAvailable() {
-    FinancialInstrumentResponse financialInstrumentList = marketHubService.getAll();
+    FinancialInstrumentResponse financialInstrumentResponse = marketHubService.getAll();
 
-    assertEquals(0, financialInstrumentList.crypto().size());
-    assertEquals(0, financialInstrumentList.stock().size());
+    assertEquals(0, financialInstrumentResponse.instruments().get(MarketType.CRYPTO).size());
+    assertEquals(0, financialInstrumentResponse.instruments().get(MarketType.STOCK).size());
   }
 
   @Test
@@ -99,9 +99,9 @@ class MarketHubServiceImplTest {
     expectedCryptoCurrency.setPrice(0);
 
     when(financialInstrumentRepository.findAll()).thenReturn(cryptoCurrencies);
-    FinancialInstrumentResponse financialInstrumentList = marketHubService.getAll();
+    var financialInstrumentMap = marketHubService.getAll().instruments();
 
-    assertEqualsListFinancialInstruments(List.of(expectedCryptoCurrency), financialInstrumentList.crypto());
+    assertEqualsListFinancialInstruments(List.of(expectedCryptoCurrency), financialInstrumentMap.get(MarketType.CRYPTO));
   }
 
   @Test
@@ -122,9 +122,9 @@ class MarketHubServiceImplTest {
     expectedCryptoCurrencies.forEach(c -> c.setPrice(0));
 
     when(financialInstrumentRepository.findAll()).thenReturn(cryptoCurrencies);
-    FinancialInstrumentResponse financialInstrumentList = marketHubService.getAll();
+    var financialInstrumentsMap = marketHubService.getAll().instruments();
 
-    assertEqualsListFinancialInstruments(expectedCryptoCurrencies, financialInstrumentList.crypto());
+    assertEqualsListFinancialInstruments(expectedCryptoCurrencies, financialInstrumentsMap.get(MarketType.CRYPTO));
   }
 
   @Test
@@ -145,9 +145,9 @@ class MarketHubServiceImplTest {
     expectedStocks.forEach(s -> s.setPrice(0));
 
     when(financialInstrumentRepository.findAll()).thenReturn(stocks);
-    FinancialInstrumentResponse financialInstrumentList = marketHubService.getAll();
+    var financialInstrumentsMap = marketHubService.getAll().instruments();
 
-    assertEqualsListFinancialInstruments(expectedStocks, financialInstrumentList.stock());
+    assertEqualsListFinancialInstruments(expectedStocks, financialInstrumentsMap.get(MarketType.STOCK));
   }
 
   @Test
@@ -181,10 +181,10 @@ class MarketHubServiceImplTest {
     expectedStocks.forEach(s -> s.setPrice(0));
 
     when(financialInstrumentRepository.findAll()).thenReturn(instruments);
-    FinancialInstrumentResponse financialInstrumentResponse = marketHubService.getAll();
+    var financialInstrumentResponse = marketHubService.getAll().instruments();
 
-    assertEqualsListFinancialInstruments(List.of(cryptoCurrency1, cryptoCurrency2), financialInstrumentResponse.crypto());
-    assertEqualsListFinancialInstruments(List.of(stock1, stock2), financialInstrumentResponse.stock());
+    assertEqualsListFinancialInstruments(List.of(cryptoCurrency1, cryptoCurrency2), financialInstrumentResponse.get(MarketType.CRYPTO));
+    assertEqualsListFinancialInstruments(List.of(stock1, stock2), financialInstrumentResponse.get(MarketType.STOCK));
   }
 
   @Test
@@ -434,10 +434,10 @@ class MarketHubServiceImplTest {
     String email = "email@gmail.com";
 
     when(subscriptionRepository.findAllByEmail(email)).thenReturn(new ArrayList<>());
-    FinancialInstrumentResponse response = marketHubService.getSubscribedFinancialInstrumentsByUser(email);
+    var response = marketHubService.getSubscribedFinancialInstrumentsByUser(email).instruments();
 
-    assertEquals(0, response.stock().size());
-    assertEquals(0, response.crypto().size());
+    assertEquals(0, response.get(MarketType.STOCK).size());
+    assertEquals(0, response.get(MarketType.CRYPTO).size());
   }
 
   @Test
@@ -445,10 +445,10 @@ class MarketHubServiceImplTest {
     String email = "email@gmail.com";
     when(subscriptionRepository.findAllByEmail(email)).thenReturn(new ArrayList<>());
 
-    FinancialInstrumentResponse response = marketHubService.getSubscribedFinancialInstrumentsByUser(email);
+    var response = marketHubService.getSubscribedFinancialInstrumentsByUser(email).instruments();
 
-    assertEquals(0, response.stock().size());
-    assertEquals(0, response.crypto().size());
+    assertEquals(0, response.get(MarketType.STOCK).size());
+    assertEquals(0, response.get(MarketType.CRYPTO).size());
   }
 
   @Test
@@ -467,11 +467,11 @@ class MarketHubServiceImplTest {
     when(subscriptionRepository.findAllByEmail(email)).thenReturn(List.of(expectedSubscription));
     when(cryptoMarketAdapter.fetchByIds(List.of(cryptoCurrency1.getName()))).thenReturn(Mono.just(List.of(cryptoCurrency1)));
     when(stockMarketAdapter.fetchByIds(anyList())).thenReturn(Mono.just(new ArrayList<>()));
-    FinancialInstrumentResponse response = marketHubService.getSubscribedFinancialInstrumentsByUser(email);
+    var response = marketHubService.getSubscribedFinancialInstrumentsByUser(email).instruments();
 
-    assertEquals(0, response.stock().size());
-    assertEquals(1, response.crypto().size());
-    assertEqualsListFinancialInstruments(List.of(cryptoCurrency1), response.crypto());
+    assertEquals(0, response.get(MarketType.STOCK).size());
+    assertEquals(1, response.get(MarketType.CRYPTO).size());
+    assertEqualsListFinancialInstruments(List.of(cryptoCurrency1), response.get(MarketType.CRYPTO));
   }
 
   @Test
@@ -490,11 +490,11 @@ class MarketHubServiceImplTest {
     when(subscriptionRepository.findAllByEmail(email)).thenReturn(List.of(expectedSubscription));
     when(stockMarketAdapter.fetchByIds(List.of(stock1.getSymbol()))).thenReturn(Mono.just(List.of(stock1)));
     when(cryptoMarketAdapter.fetchByIds(anyList())).thenReturn(Mono.just(new ArrayList<>()));
-    FinancialInstrumentResponse response = marketHubService.getSubscribedFinancialInstrumentsByUser(email);
+    var response = marketHubService.getSubscribedFinancialInstrumentsByUser(email).instruments();
 
-    assertEquals(1, response.stock().size());
-    assertEquals(0, response.crypto().size());
-    assertEqualsListFinancialInstruments(List.of(stock1), response.stock());
+    assertEquals(1, response.get(MarketType.STOCK).size());
+    assertEquals(0, response.get(MarketType.CRYPTO).size());
+    assertEqualsListFinancialInstruments(List.of(stock1), response.get(MarketType.STOCK));
   }
 
   @Test
@@ -532,12 +532,12 @@ class MarketHubServiceImplTest {
     when(stockMarketAdapter.fetchByIds(List.of(stock1.getSymbol())))
         .thenReturn(Mono.just(List.of(stock1)));
 
-    FinancialInstrumentResponse response = marketHubService.getSubscribedFinancialInstrumentsByUser(email);
+    var response = marketHubService.getSubscribedFinancialInstrumentsByUser(email).instruments();
 
-    assertEquals(1, response.crypto().size());
-    assertEquals(1, response.stock().size());
-    assertEqualsListFinancialInstruments(List.of(cryptoCurrency1), response.crypto());
-    assertEqualsListFinancialInstruments(List.of(stock1), response.stock());
+    assertEquals(1, response.get(MarketType.CRYPTO).size());
+    assertEquals(1, response.get(MarketType.STOCK).size());
+    assertEqualsListFinancialInstruments(List.of(cryptoCurrency1), response.get(MarketType.CRYPTO));
+    assertEqualsListFinancialInstruments(List.of(stock1), response.get(MarketType.STOCK));
   }
 
   @Test

@@ -1,6 +1,7 @@
 package com.tomas.market.pulse.alerts.api.services;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ public class MarketHubServiceImpl implements MarketHubService{
   private final SubscriptionEntityRepository subscriptionRepository;
   private final FinancialInstrumentEntityRepository financialInstrumentRepository;
   private final NotificationService notificationService;
+  private final Map<MarketType, MarketDataAdapter> adapterMap;
 
   public MarketHubServiceImpl(MarketDataAdapter<CryptoCurrency> cryptoMarketAdapter,
       MarketDataAdapter<Stock> stockMarketAdapter, SubscriptionEntityRepository subscriptionRepository,
@@ -48,6 +50,8 @@ public class MarketHubServiceImpl implements MarketHubService{
     this.stockMarketAdapter = stockMarketAdapter;
 
     //TODO crear map de adapters
+    adapterMap = new EnumMap<>(MarketType.class);
+    adapterMap.put(MarketType.CRYPTO, cryptoMarketAdapter);
 
     this.subscriptionRepository = subscriptionRepository;
     this.financialInstrumentRepository = financialInstrumentRepository;
@@ -58,17 +62,18 @@ public class MarketHubServiceImpl implements MarketHubService{
   public FinancialInstrumentResponse getAll() {
     List<FinancialInstrumentEntity> instrumentEntities = financialInstrumentRepository.findAll();
 
-    List<CryptoCurrency> cryptoCurrencies = instrumentEntities.stream()
+    Map<MarketType, List<? extends FinancialInstrument>> instrumentsMap = new EnumMap<>(MarketType.class);
+    instrumentsMap.put(MarketType.CRYPTO, instrumentEntities.stream()
         .filter(i -> i.getMarketType().equals(MarketType.CRYPTO))
         .map(i -> new CryptoCurrency(i.getSymbol(), i.getName(), 0))
-        .toList();
+        .toList());
 
-    List<Stock> stocks = instrumentEntities.stream()
+    instrumentsMap.put(MarketType.STOCK, instrumentEntities.stream()
         .filter(i -> i.getMarketType().equals(MarketType.STOCK))
         .map(i -> new Stock(i.getSymbol(), i.getName(), 0))
-        .toList();
+        .toList());
 
-    return new FinancialInstrumentResponse(cryptoCurrencies, stocks);
+    return new FinancialInstrumentResponse(instrumentsMap);
   }
 
   @Override
@@ -111,7 +116,13 @@ public class MarketHubServiceImpl implements MarketHubService{
     var stockSymbols = filterByMarketTypeAndMapToIdsList(MarketType.STOCK,
         FinancialInstrumentEntity::getSymbol, instrumentEntities);
 
-    BiFunction<List<CryptoCurrency>, List<Stock>, FinancialInstrumentResponse> mapFunction = (cryptoCurrencies, stocks) -> new FinancialInstrumentResponse(cryptoCurrencies, stocks);
+    BiFunction<List<CryptoCurrency>, List<Stock>, FinancialInstrumentResponse> mapFunction = (cryptoCurrencies, stocks) -> {
+      Map<MarketType, List<? extends FinancialInstrument>> instrumentsMap = new EnumMap<>(MarketType.class);
+      instrumentsMap.put(MarketType.CRYPTO, cryptoCurrencies);
+      instrumentsMap.put(MarketType.STOCK, stocks);
+
+      return new FinancialInstrumentResponse(instrumentsMap);
+    };
     return fetchFinancialInstrumentsById(cryptoNames, stockSymbols, mapFunction)
         .block();
   }
