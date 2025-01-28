@@ -41,7 +41,6 @@ public class MarketHubServiceImpl implements MarketHubService{
   private final SubscriptionEntityRepository subscriptionRepository;
   private final FinancialInstrumentEntityRepository financialInstrumentRepository;
   private final NotificationService notificationService;
-  private final Map<MarketType, MarketDataAdapter> adapterMap;
 
   public MarketHubServiceImpl(MarketDataAdapter<CryptoCurrency> cryptoMarketAdapter,
       MarketDataAdapter<Stock> stockMarketAdapter, SubscriptionEntityRepository subscriptionRepository,
@@ -50,8 +49,6 @@ public class MarketHubServiceImpl implements MarketHubService{
     this.stockMarketAdapter = stockMarketAdapter;
 
     //TODO crear map de adapters
-    adapterMap = new EnumMap<>(MarketType.class);
-    adapterMap.put(MarketType.CRYPTO, cryptoMarketAdapter);
 
     this.subscriptionRepository = subscriptionRepository;
     this.financialInstrumentRepository = financialInstrumentRepository;
