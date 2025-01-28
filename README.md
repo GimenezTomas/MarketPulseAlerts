@@ -67,7 +67,7 @@ docker run -d \
 
 1. **Clone the Repository**:
    ```bash
-   git clone ssh://git@github.com:example/market-pulse-alerts.git
+   git clone ssh://git@github.com:GimenezTomas/MarketPulseAlerts.git
    cd market-pulse-alerts
    ```
 
@@ -75,15 +75,15 @@ docker run -d \
    - Create a new project from the existing sources and select the cloned `market-pulse-alerts` directory.
 
 3. **Set Up Java 17**:
-   - Ensure you have Java 17 configured in IntelliJ. You can check this under `File > Project Structure > Project`.
+   - Ensure you have Java 17 configured in IntelliJ. You can check this under `File > Project Structure > Project`. Make sure to configure the sdk.
 
 4. **Run the Application**:
    - Create a new Run Configuration:
       - Go to `Run > Edit Configurations > + > Application`.
       - Name: `Market Pulse Alerts`
-      - Main class: `com.example.marketpulsealerts.MarketPulseAlertsApplication`
+      - Main class: `com.market.pulse.alerts.Application`
       - Program arguments: `--spring.profiles.active=local`
-      - Use classpath of module: `market-pulse-alerts`
+      - Use classpath of module: `market.pulse.alerts.main`
       - Click `OK`.
 
 5. **Start the Application**:
@@ -220,7 +220,6 @@ url: https://api.profit.com/data-api/reference/stocks?token={your_account_key}&s
             "country": "United States",
             "exchange": "NASDAQ"
         }
-        // Additional stock items...
     ],
     "total": 47016
 }

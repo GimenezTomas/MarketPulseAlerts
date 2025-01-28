@@ -7,19 +7,18 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import lombok.Setter;
 import reactor.core.publisher.Mono;
 
 @Service
 public class CoinGeckoApiClient {
-  private final WebClient coinGeckoApiClient;
+  private final WebClient webClient;
 
-  public CoinGeckoApiClient(@Qualifier("coinGeckoClient") WebClient coinGeckoApiClient) {
-    this.coinGeckoApiClient = coinGeckoApiClient;
+  public CoinGeckoApiClient(@Qualifier("coinGeckoClient") WebClient webClient) {
+    this.webClient = webClient;
   }
 
   public Mono<List<CoinGeckoCryptoDTO>> fetchMarketData(List<String> ids) {
-    return coinGeckoApiClient.get()
+    return webClient.get()
         .uri(uriBuilder -> uriBuilder
             .path("/coins/markets")
             .queryParam("vs_currency", "usd")

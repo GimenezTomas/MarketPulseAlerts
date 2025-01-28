@@ -1,5 +1,7 @@
 package com.tomas.market.pulse.alerts.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -8,6 +10,7 @@ import lombok.Data;
 public abstract class FinancialInstrument {
   protected String symbol;
   protected String name;
-  //TODO sacar price o por lo menos que sea nulleable
+
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   protected double price;
 }

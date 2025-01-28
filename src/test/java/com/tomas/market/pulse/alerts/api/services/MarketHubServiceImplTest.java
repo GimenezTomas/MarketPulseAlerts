@@ -2,13 +2,13 @@ package com.tomas.market.pulse.alerts.api.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -194,13 +194,13 @@ class MarketHubServiceImplTest {
     int lowerThreshold = 10;
     financialInstrumentEntity.setMarketType(MarketType.CRYPTO);
 
-    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(anyString(), anyString())).thenReturn(false);
+    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(anyString(), any(), anyString())).thenReturn(false);
     when(financialInstrumentRepository.findBySymbolAndMarketType(financialInstrumentEntity.getSymbol(), financialInstrumentEntity.getMarketType())).thenReturn(Optional.of(financialInstrumentEntity));
     when(cryptoMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity)).thenReturn(Mono.just(cryptoCurrency1));
 
     marketHubService.subscribeUserToFinancialInstrument(email, financialInstrumentEntity.getSymbol(), financialInstrumentEntity.getMarketType(), upperThreshold, lowerThreshold);
 
-    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(financialInstrumentEntity.getSymbol(), email);
+    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(financialInstrumentEntity.getSymbol(), financialInstrumentEntity.getMarketType(),email);
     verify(subscriptionRepository).save(any());
     verify(cryptoMarketAdapter).fetchByFinancialInstrument(financialInstrumentEntity);
     verifyNoInteractions(stockMarketAdapter);
@@ -212,13 +212,14 @@ class MarketHubServiceImplTest {
     int upperThreshold = 10;
     int lowerThreshold = 10;
 
-    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(anyString(), anyString())).thenReturn(false);
+    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(anyString(), any(),anyString())).thenReturn(false);
     when(financialInstrumentRepository.findBySymbolAndMarketType(financialInstrumentEntity.getSymbol(), financialInstrumentEntity.getMarketType())).thenReturn(Optional.of(financialInstrumentEntity));
     when(cryptoMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Crypto currency not found"));
 
-    ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> marketHubService.subscribeUserToFinancialInstrument(email, financialInstrumentEntity.getSymbol(), financialInstrumentEntity.getMarketType(), upperThreshold, lowerThreshold));
+    Executable subscribeAction = () -> marketHubService.subscribeUserToFinancialInstrument(email, financialInstrumentEntity.getSymbol(), financialInstrumentEntity.getMarketType(), upperThreshold, lowerThreshold);
+    ResponseStatusException e = assertThrows(ResponseStatusException.class, subscribeAction);
 
-    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(financialInstrumentEntity.getSymbol(), email);
+    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(financialInstrumentEntity.getSymbol(), financialInstrumentEntity.getMarketType(),email);
     verify(cryptoMarketAdapter).fetchByFinancialInstrument(financialInstrumentEntity);
     verifyNoInteractions(stockMarketAdapter);
 
@@ -227,11 +228,11 @@ class MarketHubServiceImplTest {
 
   @Test
   void shouldThrowExceptionWhenUserIsAlreadySubscribedToTheFinancialInstrumentNotifications(){
-    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(anyString(), anyString())).thenReturn(true);
+    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(anyString(), any(), anyString())).thenReturn(true);
 
     ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> marketHubService.subscribeUserToFinancialInstrument("", "", MarketType.CRYPTO, 0,0));
 
-    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(anyString(), anyString());
+    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(anyString(), any(),anyString());
     verifyNoInteractions(cryptoMarketAdapter);
     verifyNoInteractions(stockMarketAdapter);
 
@@ -245,13 +246,13 @@ class MarketHubServiceImplTest {
     int lowerThreshold = 10;
     financialInstrumentEntity.setMarketType(MarketType.STOCK);
 
-    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(anyString(), anyString())).thenReturn(false);
+    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(anyString(), any(), anyString())).thenReturn(false);
     when(financialInstrumentRepository.findBySymbolAndMarketType(financialInstrumentEntity.getSymbol(), financialInstrumentEntity.getMarketType())).thenReturn(Optional.of(financialInstrumentEntity));
     when(stockMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity)).thenReturn(Mono.just(stock1));
 
     marketHubService.subscribeUserToFinancialInstrument(email, financialInstrumentEntity.getSymbol(), financialInstrumentEntity.getMarketType(), upperThreshold, lowerThreshold);
 
-    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(financialInstrumentEntity.getSymbol(), email);
+    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(financialInstrumentEntity.getSymbol(), financialInstrumentEntity.getMarketType(), email);
     verify(subscriptionRepository).save(any());
     verify(stockMarketAdapter).fetchByFinancialInstrument(financialInstrumentEntity);
     verifyNoInteractions(cryptoMarketAdapter);
@@ -265,7 +266,7 @@ class MarketHubServiceImplTest {
     int upperThreshold = 10;
     int lowerThreshold = 10;
 
-    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(anyString(), anyString())).thenReturn(false);
+    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(anyString(), any(), anyString())).thenReturn(false);
     when(financialInstrumentRepository.findBySymbolAndMarketType(cod, marketType)).thenReturn(Optional.of(financialInstrumentEntity));
     when(stockMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found"));
 
@@ -273,7 +274,7 @@ class MarketHubServiceImplTest {
         marketHubService.subscribeUserToFinancialInstrument(email, cod, marketType, upperThreshold, lowerThreshold)
     );
 
-    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(cod, email);
+    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(cod, marketType,email);
     verify(subscriptionRepository, times(0)).save(any());
     verify(stockMarketAdapter).fetchByFinancialInstrument(financialInstrumentEntity);
     verifyNoInteractions(cryptoMarketAdapter);
@@ -290,7 +291,7 @@ class MarketHubServiceImplTest {
     int upperThreshold = 10;
     int lowerThreshold = 10;
 
-    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(anyString(), anyString())).thenReturn(false);
+    when(subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(anyString(), any(), anyString())).thenReturn(false);
     when(financialInstrumentRepository.findBySymbolAndMarketType(cod, marketType)).thenReturn(Optional.empty());
 
     ResponseStatusException e = assertThrows(ResponseStatusException.class, () ->
@@ -298,7 +299,7 @@ class MarketHubServiceImplTest {
     );
 
     verify(financialInstrumentRepository).findBySymbolAndMarketType(cod, marketType);
-    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(cod, email);
+    verify(subscriptionRepository).existsSubscriptionEntityByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(cod, marketType, email);
     verify(subscriptionRepository, times(0)).save(any());
     verifyNoMoreInteractions(stockMarketAdapter);
     verifyNoInteractions(cryptoMarketAdapter);
@@ -310,10 +311,11 @@ class MarketHubServiceImplTest {
   void shouldAllowUserToUnsubscribeFromFinancialInstrumentNotificationsWhenUserHasAnOngoingSubscription(){
     String cod = "cod1";
     String email = "email@gmail.com";
+    MarketType marketType = MarketType.STOCK;
 
-    marketHubService.unSubscribeUserFromFinancialInstrumentNotifications(email, cod);
+    marketHubService.unSubscribeUserFromFinancialInstrumentNotifications(email, marketType, cod);
 
-    verify(subscriptionRepository, times(1)).deleteByFinancialInstrument_SymbolAndEmail(cod, email);
+    verify(subscriptionRepository, times(1)).deleteByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(cod, marketType, email);
   }
 
   @Test
@@ -665,7 +667,7 @@ class MarketHubServiceImplTest {
 
     marketHubService.notifySubscribers();
 
-    assertEquals(cryptoCurrency1.getPrice(), subscription.getCurrentPrice());
+    assertEquals(cryptoCurrency1.getPrice(), subscription.getLastReferencePrice());
     verify(subscriptionRepository).saveAll(List.of(subscription));
     verifyInteractions(financialInstrument, List.of(cryptoCurrency1.getName()), new ArrayList<>());
     verify(notificationService).notifyUsersByEmail(
@@ -684,7 +686,7 @@ class MarketHubServiceImplTest {
   private SubscriptionEntity createSubscription(FinancialInstrumentEntity financialInstrument, double lastPrice) {
     return SubscriptionEntity.builder()
         .financialInstrument(financialInstrument)
-        .currentPrice(lastPrice)
+        .lastReferencePrice(lastPrice)
         .lowerThreshold(10)
         .upperThreshold(10)
         .email("email@gmail.com")

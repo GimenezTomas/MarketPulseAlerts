@@ -7,12 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -24,9 +25,8 @@ import com.tomas.market.pulse.alerts.model.entities.FinancialInstrumentEntity;
 
 import reactor.core.publisher.Mono;
 
-//TODO ver que onda esta anotacion
-@MockitoSettings(strictness = Strictness.LENIENT)
-public class StockMarketAdapterTest {
+@ExtendWith(MockitoExtension.class)
+class StockMarketAdapterTest {
   @InjectMocks
   private StockMarketAdapter stockMarketAdapter;
   @Mock
@@ -69,7 +69,8 @@ public class StockMarketAdapterTest {
 
     when(profitApiClient.fetchStockById(financialInstrumentEntity.getSymbol())).thenReturn(Mono.just(new StockProfitDTO(null, null, 0)));
 
-    var e = assertThrows(ResponseStatusException.class, () -> stockMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity).block());
+    var monoResult = stockMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity);
+    var e = assertThrows(ResponseStatusException.class, monoResult::block);
     assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
   }
 
@@ -84,7 +85,7 @@ public class StockMarketAdapterTest {
     Mono<List<Stock>> response = stockMarketAdapter.fetchByIds(List.of(stock1.name(), stock2.name()));
     var stockList = response.block();
 
-    assertEquals(2, stockList.size());
+    assertEquals(2, Objects.requireNonNull(stockList).size());
 
     assertEquals(stock1.symbol(), stockList.get(0).getSymbol());
     assertEquals(stock1.name(), stockList.get(0).getName());
@@ -106,7 +107,7 @@ public class StockMarketAdapterTest {
     Mono<List<Stock>> response = stockMarketAdapter.fetchByIds(List.of(stock1.name(), stock2.name()));
     var stockList = response.block();
 
-    assertEquals(1, stockList.size());
+    assertEquals(1, Objects.requireNonNull(stockList).size());
 
     assertEquals(stock1.symbol(), stockList.get(0).getSymbol());
     assertEquals(stock1.name(), stockList.get(0).getName());

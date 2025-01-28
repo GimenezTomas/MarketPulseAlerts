@@ -25,4 +25,4 @@ public class NotifySubscribersScheduler {
       log.error("Error occurred while executing scheduled task: NotifySubscribers", e);
     }
   }
-} //todo actualizar el current price
+}

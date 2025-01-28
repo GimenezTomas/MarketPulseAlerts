@@ -6,12 +6,13 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -22,7 +23,8 @@ import com.tomas.market.pulse.alerts.model.MarketType;
 import com.tomas.market.pulse.alerts.model.entities.FinancialInstrumentEntity;
 
 import reactor.core.publisher.Mono;
-@MockitoSettings(strictness = Strictness.LENIENT)
+
+@ExtendWith(MockitoExtension.class)
 class CryptoMarketAdapterTest {
   @InjectMocks
   private CryptoMarketAdapter cryptoMarketAdapter;
@@ -70,7 +72,8 @@ class CryptoMarketAdapterTest {
     when(coinGeckoApiClient.fetchMarketData(List.of(financialInstrumentEntity.getName())))
         .thenReturn(Mono.just(List.of()));
 
-    var e = assertThrows(ResponseStatusException.class, () -> cryptoMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity).block());
+    var monoResult = cryptoMarketAdapter.fetchByFinancialInstrument(financialInstrumentEntity);
+    var e = assertThrows(ResponseStatusException.class, monoResult::block);
     assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
   }
 
@@ -83,7 +86,7 @@ class CryptoMarketAdapterTest {
     Mono<List<CryptoCurrency>> response = cryptoMarketAdapter.fetchByIds(List.of(coin1.symbol(), coin2.symbol()));
     var cryptoCurrencies = response.block();
 
-    assertEquals(2, cryptoCurrencies.size());
+    assertEquals(2, Objects.requireNonNull(cryptoCurrencies).size());
 
     assertEquals(coin1.symbol(), cryptoCurrencies.get(0).getSymbol());
     assertEquals(coin1.name(), cryptoCurrencies.get(0).getName());

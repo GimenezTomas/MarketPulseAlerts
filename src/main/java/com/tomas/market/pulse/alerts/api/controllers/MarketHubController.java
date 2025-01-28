@@ -3,6 +3,7 @@ package com.tomas.market.pulse.alerts.api.controllers;
 import com.tomas.market.pulse.alerts.api.dtos.FinancialInstrumentResponse;
 import com.tomas.market.pulse.alerts.api.dtos.SubscriptionRequest;
 import com.tomas.market.pulse.alerts.api.services.MarketHubService;
+import com.tomas.market.pulse.alerts.model.MarketType;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +50,7 @@ public class MarketHubController {
   })
   @PostMapping("/subscriptions")
   public ResponseEntity<String> subscribe(@Valid @RequestBody SubscriptionRequest request) {
-    marketHubService.subscribeUserToFinancialInstrument(request.email(), request.financialInstrumentId(), request.marketType(),
+    marketHubService.subscribeUserToFinancialInstrument(request.email(), request.symbol(), request.marketType(),
         request.upperThreshold(), request.lowerThreshold());
     return new ResponseEntity<>("Subscription created successfully.", HttpStatus.CREATED);
   }
@@ -62,8 +63,9 @@ public class MarketHubController {
   @DeleteMapping("/subscriptions")
   public ResponseEntity<Void> unsubscribeUser(
       @RequestParam String email,
+      @RequestParam MarketType marketType,
       @RequestParam String financialInstrumentId) {
-    marketHubService.unSubscribeUserFromFinancialInstrumentNotifications(email, financialInstrumentId);
+    marketHubService.unSubscribeUserFromFinancialInstrumentNotifications(email, marketType, financialInstrumentId);
     return ResponseEntity.noContent().build();
   }
 

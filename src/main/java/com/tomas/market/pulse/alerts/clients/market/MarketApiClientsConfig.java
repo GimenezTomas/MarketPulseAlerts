@@ -26,9 +26,7 @@ public class MarketApiClientsConfig {
         .baseUrl(coinGeckoApiProperties.getBaseUrl())
         .defaultHeader("accept", "application/json")
         .defaultHeader("x-cg-demo-api-key", coinGeckoApiProperties.getApiKey())
-        .filters(exchangeFilterFunctions -> {
-          exchangeFilterFunctions.add(logRequest());
-        })
+        .filters(exchangeFilterFunctions -> exchangeFilterFunctions.add(logRequest()))
         .build();
   }
 
@@ -42,9 +40,7 @@ public class MarketApiClientsConfig {
     return builder
         .baseUrl(baseUrlWithToken)
         .defaultHeader("accept", "application/json")
-        .filters(exchangeFilterFunctions -> {
-          exchangeFilterFunctions.add(logRequest());
-        })
+        .filters(exchangeFilterFunctions -> exchangeFilterFunctions.add(logRequest()))
         .build();
   }
 

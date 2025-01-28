@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -73,7 +74,7 @@ public class MarketHubServiceImpl implements MarketHubService{
   @Override
   public void subscribeUserToFinancialInstrument(String email, String symbol, MarketType marketType,
       int upperThreshold, int lowerThreshold) {
-    if (subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndEmail(symbol, email))
+    if (subscriptionRepository.existsSubscriptionEntityByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(symbol, marketType, email))
       throw new ResponseStatusException(HttpStatus.CONFLICT, String.format("%s is already subscribed to %s", email, symbol));
 
     var adapter = getMarketAdapter(marketType);
@@ -83,7 +84,7 @@ public class MarketHubServiceImpl implements MarketHubService{
     SubscriptionEntity subscriptionEntity = SubscriptionEntity.builder()
         .email(email)
         .financialInstrument(financialInstrument)
-        .currentPrice(result.getPrice())
+        .lastReferencePrice(Objects.requireNonNull(result).getPrice())
         .originalPrice(result.getPrice())
         .lowerThreshold(lowerThreshold)
         .upperThreshold(upperThreshold)
@@ -93,8 +94,8 @@ public class MarketHubServiceImpl implements MarketHubService{
 
   @Transactional
   @Override
-  public void unSubscribeUserFromFinancialInstrumentNotifications(String email, String financialInstrumentId) {
-    subscriptionRepository.deleteByFinancialInstrument_SymbolAndEmail(financialInstrumentId, email);
+  public void unSubscribeUserFromFinancialInstrumentNotifications(String email, MarketType marketType, String financialInstrumentId) {
+    subscriptionRepository.deleteByFinancialInstrument_SymbolAndFinancialInstrument_MarketTypeAndEmail(financialInstrumentId, marketType ,email);
   }
 
   @Override
@@ -115,7 +116,6 @@ public class MarketHubServiceImpl implements MarketHubService{
         .block();
   }
 
-  //TODO Hay codigo repetido que seguro se pueda sacar
   @Override
   public void syncNewFinancialInstruments() {
     Mono<List<CryptoCurrency>> cryptoCurrenciesMono = cryptoMarketAdapter.fetchMarketData();
@@ -133,37 +133,20 @@ public class MarketHubServiceImpl implements MarketHubService{
               .map(FinancialInstrumentEntity::getSymbol)
               .collect(Collectors.toSet());
 
-          List<FinancialInstrumentEntity> missingFinancialInstruments = new ArrayList<>(tuple.getT1().stream()
-              .filter(crypto -> !symbolsInRepo.contains(crypto.getSymbol())) //TODO habria que corregir agregando la vallidacion extra del tipo de mercado para que ademas de existir el simbolo pertenezca a ese mercado
-              .map(c -> FinancialInstrumentEntity.builder()
-                  .name(c.getName())
-                  .symbol(c.getSymbol())
-                  .marketType(MarketType.CRYPTO)
-                  .build()
-              )
-              .toList());
-
-          missingFinancialInstruments.addAll(tuple.getT2().stream()
-              .filter(stock -> !symbolsInRepo.contains(stock.getSymbol()))
-              .map(s -> FinancialInstrumentEntity.builder()
-                  .name(s.getName())
-                  .symbol(s.getSymbol())
-                  .marketType(MarketType.STOCK)
-                  .build())
-              .toList()
-          );
+          List<FinancialInstrumentEntity> missingFinancialInstruments = new ArrayList<>();
+          missingFinancialInstruments.addAll(filterAndMap(tuple.getT1(), symbolsInRepo, MarketType.CRYPTO));
+          missingFinancialInstruments.addAll(filterAndMap(tuple.getT2(), symbolsInRepo, MarketType.STOCK));
 
           return financialInstrumentRepository.saveAll(missingFinancialInstruments);
         }).block();
   }
 
-  //TODO Hay codigo repetido que seguro se pueda sacar
   @Override
   public void notifySubscribers() {
     var financialInstruments = financialInstrumentRepository.findAllWithRelatedSubscriptions();
 
     if (financialInstruments.isEmpty()) {
-      log.info("no user was notified due to there are not subscriptions");
+      log.info("No notifications were sent because there were no subscriptions");
       return;
     }
 
@@ -205,7 +188,7 @@ public class MarketHubServiceImpl implements MarketHubService{
               .filter(subscriptionEntity -> shouldNotify(subscriptionEntity, instrumentPrice))
               .toList();
 
-          subscriptions.forEach(subscriptionEntity -> subscriptionEntity.setCurrentPrice(instrumentPrice));
+          subscriptions.forEach(subscriptionEntity -> subscriptionEntity.setLastReferencePrice(instrumentPrice));
           subscriptionRepository.saveAll(subscriptions);
 
           var emailsAndMessages = subscriptions.stream()
@@ -237,7 +220,7 @@ public class MarketHubServiceImpl implements MarketHubService{
   }
 
   private boolean shouldNotify(SubscriptionEntity subscription, double currentPrice) {
-    double subsctiptionLastPrice = subscription.getCurrentPrice();
+    double subsctiptionLastPrice = subscription.getLastReferencePrice();
     double upperThresholdPrice = calculateUpperThreshold(subsctiptionLastPrice, subscription.getUpperThreshold());
     double lowerThresholdPrice = calculateLowerThreshold(subsctiptionLastPrice, subscription.getLowerThreshold());
 
@@ -266,5 +249,16 @@ public class MarketHubServiceImpl implements MarketHubService{
       case CRYPTO -> cryptoMarketAdapter;
       case STOCK -> stockMarketAdapter;
     };
+  }
+
+  private <T extends FinancialInstrument> List<FinancialInstrumentEntity> filterAndMap(List<T> instruments, Set<String> symbolsInRepo, MarketType marketType) {
+    return instruments.stream()
+        .filter(i -> !symbolsInRepo.contains(i.getSymbol()))
+        .map(i -> FinancialInstrumentEntity.builder()
+            .marketType(marketType)
+            .symbol(i.getSymbol())
+            .name(i.getName())
+            .build())
+        .toList();
   }
 }

@@ -11,9 +11,11 @@ import com.tomas.market.pulse.alerts.model.Stock;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.http.HttpStatus;
@@ -26,14 +28,13 @@ import java.util.List;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
-@MockitoSettings(strictness = Strictness.LENIENT)
+@ExtendWith(MockitoExtension.class)
 class MarketHubControllerTest {
 
   @InjectMocks
   private MarketHubController marketHubController;
   @Mock
   private MarketHubService marketHubService;
-//TODO chequear si esto asi esta ok
   private WebTestClient webTestClient;
 
   @BeforeEach
@@ -75,7 +76,7 @@ class MarketHubControllerTest {
         MarketType.CRYPTO
     );
 
-    doThrow(marketHubService.subscribeUserToFinancialInstrument(request.email(), request.financialInstrumentId(), request.marketType(), request.upperThreshold(), request.lowerThreshold()));
+    doThrow(marketHubService.subscribeUserToFinancialInstrument(request.email(), request.symbol(), request.marketType(), request.upperThreshold(), request.lowerThreshold()));
 
     // Act & Assert
     webTestClient.post()
@@ -102,7 +103,7 @@ class MarketHubControllerTest {
         MarketType.CRYPTO
     );
 
-    doThrow(new ResponseStatusException(HttpStatus.CONFLICT, ""), () -> marketHubService.subscribeUserToFinancialInstrument(request.email(), request.financialInstrumentId(), request.marketType(), request.upperThreshold(), request.lowerThreshold()));
+    doThrow(new ResponseStatusException(HttpStatus.CONFLICT, ""), () -> marketHubService.subscribeUserToFinancialInstrument(request.email(), request.symbol(), request.marketType(), request.upperThreshold(), request.lowerThreshold()));
 
     // Act & Assert
     webTestClient.post()

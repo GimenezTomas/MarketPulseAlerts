@@ -1,7 +1,6 @@
 package com.tomas.market.pulse.alerts.api.services;
 
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.springframework.stereotype.Service;
 

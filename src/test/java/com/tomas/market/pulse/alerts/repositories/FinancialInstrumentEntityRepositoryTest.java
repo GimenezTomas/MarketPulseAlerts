@@ -18,8 +18,6 @@ import org.springframework.test.context.TestPropertySource;
 import com.tomas.market.pulse.alerts.model.MarketType;
 import com.tomas.market.pulse.alerts.model.entities.FinancialInstrumentEntity;
 import com.tomas.market.pulse.alerts.model.entities.SubscriptionEntity;
-import com.tomas.market.pulse.alerts.repositories.FinancialInstrumentEntityRepository;
-import com.tomas.market.pulse.alerts.repositories.SubscriptionEntityRepository;
 
 @TestPropertySource(locations = "classpath:application-test.properties")
 @DataJpaTest
@@ -78,7 +76,7 @@ class FinancialInstrumentEntityRepositoryTest {
     SubscriptionEntity s = SubscriptionEntity.builder()
         .financialInstrument(f1)
         .email("email@gmail.com")
-        .currentPrice(10)
+        .lastReferencePrice(10)
         .originalPrice(10)
         .lowerThreshold(10)
         .upperThreshold(10)
@@ -97,7 +95,7 @@ class FinancialInstrumentEntityRepositoryTest {
     SubscriptionEntity s1 = SubscriptionEntity.builder()
         .financialInstrument(f1)
         .email("email@gmail.com")
-        .currentPrice(10)
+        .lastReferencePrice(10)
         .originalPrice(10)
         .lowerThreshold(10)
         .upperThreshold(10)
@@ -108,7 +106,7 @@ class FinancialInstrumentEntityRepositoryTest {
     SubscriptionEntity s2 = SubscriptionEntity.builder()
         .financialInstrument(f2)
         .email("email@gmail.com")
-        .currentPrice(10)
+        .lastReferencePrice(10)
         .originalPrice(10)
         .lowerThreshold(10)
         .upperThreshold(10)
@@ -128,7 +126,7 @@ class FinancialInstrumentEntityRepositoryTest {
     SubscriptionEntity s1 = SubscriptionEntity.builder()
         .financialInstrument(f1)
         .email("email@gmail.com")
-        .currentPrice(10)
+        .lastReferencePrice(10)
         .originalPrice(10)
         .lowerThreshold(10)
         .upperThreshold(10)
@@ -139,7 +137,7 @@ class FinancialInstrumentEntityRepositoryTest {
     SubscriptionEntity s2 = SubscriptionEntity.builder()
         .financialInstrument(f1)
         .email("email@gmail.com")
-        .currentPrice(10)
+        .lastReferencePrice(10)
         .originalPrice(10)
         .lowerThreshold(10)
         .upperThreshold(10)
